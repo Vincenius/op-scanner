@@ -61,18 +61,59 @@ class Variants extends Table {
 @DataClassName('SyncMetaRow')
 class SyncMeta extends Table {
   IntColumn get id => integer()(); // singleton row, always 1
-  DateTimeColumn get lastSyncAt => dateTime().nullable()();
+  DateTimeColumn get lastSyncAt => dateTime().nullable()(); // catalog sync
+  DateTimeColumn get collectionLastSyncAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Sets, Cards, Variants, SyncMeta])
+// User collection (offline-first). Source of truth for the UI; edits write here
+// immediately and enqueue the clientUuid in SyncQueue for the next flush.
+@DataClassName('CollectionItemRow')
+class CollectionItems extends Table {
+  TextColumn get clientUuid => text()();
+  TextColumn get variantId => text()();
+  IntColumn get quantity => integer().withDefault(const Constant(1))();
+  TextColumn get condition => text().withDefault(const Constant('NM'))();
+  BoolColumn get isFoil => boolean().withDefault(const Constant(false))();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get addedAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()(); // client logical version (LWW)
+  DateTimeColumn get deletedAt => dateTime().nullable()(); // tombstone
+
+  @override
+  Set<Column> get primaryKey => {clientUuid};
+}
+
+// Coalesced pending-mutation set (one row per dirty collection entry).
+@DataClassName('SyncQueueRow')
+class SyncQueue extends Table {
+  TextColumn get clientUuid => text()();
+  DateTimeColumn get queuedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {clientUuid};
+}
+
+@DriftDatabase(tables: [Sets, Cards, Variants, SyncMeta, CollectionItems, SyncQueue])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(collectionItems);
+            await m.createTable(syncQueue);
+            await m.addColumn(syncMeta, syncMeta.collectionLastSyncAt);
+          }
+        },
+      );
 
   static QueryExecutor _open() => driftDatabase(
         name: 'op_scanner',
@@ -95,9 +136,31 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Future<DateTime?> collectionLastSyncAt() async {
+    final row = await (select(syncMeta)..where((t) => t.id.equals(1)))
+        .getSingleOrNull();
+    return row?.collectionLastSyncAt;
+  }
+
+  Future<void> setCollectionLastSyncAt(DateTime when) async {
+    await into(syncMeta).insertOnConflictUpdate(
+      SyncMetaCompanion.insert(id: const Value(1), collectionLastSyncAt: Value(when)),
+    );
+  }
+
   Future<int> variantCount() async {
     final count = countAll();
     final row = await (selectOnly(variants)..addColumns([count])).getSingle();
     return row.read(count) ?? 0;
+  }
+
+  /// Wipe local collection state (used on logout / account switch).
+  Future<void> clearCollection() async {
+    await transaction(() async {
+      await delete(collectionItems).go();
+      await delete(syncQueue).go();
+      await (update(syncMeta)..where((t) => t.id.equals(1)))
+          .write(const SyncMetaCompanion(collectionLastSyncAt: Value(null)));
+    });
   }
 }

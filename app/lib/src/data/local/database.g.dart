@@ -1876,8 +1876,19 @@ class $SyncMetaTable extends SyncMeta
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _collectionLastSyncAtMeta =
+      const VerificationMeta('collectionLastSyncAt');
   @override
-  List<GeneratedColumn> get $columns => [id, lastSyncAt];
+  late final GeneratedColumn<DateTime> collectionLastSyncAt =
+      GeneratedColumn<DateTime>(
+        'collection_last_sync_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [id, lastSyncAt, collectionLastSyncAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1902,6 +1913,15 @@ class $SyncMetaTable extends SyncMeta
         ),
       );
     }
+    if (data.containsKey('collection_last_sync_at')) {
+      context.handle(
+        _collectionLastSyncAtMeta,
+        collectionLastSyncAt.isAcceptableOrUnknown(
+          data['collection_last_sync_at']!,
+          _collectionLastSyncAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1919,6 +1939,10 @@ class $SyncMetaTable extends SyncMeta
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_sync_at'],
       ),
+      collectionLastSyncAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}collection_last_sync_at'],
+      ),
     );
   }
 
@@ -1931,13 +1955,21 @@ class $SyncMetaTable extends SyncMeta
 class SyncMetaRow extends DataClass implements Insertable<SyncMetaRow> {
   final int id;
   final DateTime? lastSyncAt;
-  const SyncMetaRow({required this.id, this.lastSyncAt});
+  final DateTime? collectionLastSyncAt;
+  const SyncMetaRow({
+    required this.id,
+    this.lastSyncAt,
+    this.collectionLastSyncAt,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     if (!nullToAbsent || lastSyncAt != null) {
       map['last_sync_at'] = Variable<DateTime>(lastSyncAt);
+    }
+    if (!nullToAbsent || collectionLastSyncAt != null) {
+      map['collection_last_sync_at'] = Variable<DateTime>(collectionLastSyncAt);
     }
     return map;
   }
@@ -1948,6 +1980,9 @@ class SyncMetaRow extends DataClass implements Insertable<SyncMetaRow> {
       lastSyncAt: lastSyncAt == null && nullToAbsent
           ? const Value.absent()
           : Value(lastSyncAt),
+      collectionLastSyncAt: collectionLastSyncAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(collectionLastSyncAt),
     );
   }
 
@@ -1959,6 +1994,9 @@ class SyncMetaRow extends DataClass implements Insertable<SyncMetaRow> {
     return SyncMetaRow(
       id: serializer.fromJson<int>(json['id']),
       lastSyncAt: serializer.fromJson<DateTime?>(json['lastSyncAt']),
+      collectionLastSyncAt: serializer.fromJson<DateTime?>(
+        json['collectionLastSyncAt'],
+      ),
     );
   }
   @override
@@ -1967,15 +2005,22 @@ class SyncMetaRow extends DataClass implements Insertable<SyncMetaRow> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'lastSyncAt': serializer.toJson<DateTime?>(lastSyncAt),
+      'collectionLastSyncAt': serializer.toJson<DateTime?>(
+        collectionLastSyncAt,
+      ),
     };
   }
 
   SyncMetaRow copyWith({
     int? id,
     Value<DateTime?> lastSyncAt = const Value.absent(),
+    Value<DateTime?> collectionLastSyncAt = const Value.absent(),
   }) => SyncMetaRow(
     id: id ?? this.id,
     lastSyncAt: lastSyncAt.present ? lastSyncAt.value : this.lastSyncAt,
+    collectionLastSyncAt: collectionLastSyncAt.present
+        ? collectionLastSyncAt.value
+        : this.collectionLastSyncAt,
   );
   SyncMetaRow copyWithCompanion(SyncMetaCompanion data) {
     return SyncMetaRow(
@@ -1983,6 +2028,9 @@ class SyncMetaRow extends DataClass implements Insertable<SyncMetaRow> {
       lastSyncAt: data.lastSyncAt.present
           ? data.lastSyncAt.value
           : this.lastSyncAt,
+      collectionLastSyncAt: data.collectionLastSyncAt.present
+          ? data.collectionLastSyncAt.value
+          : this.collectionLastSyncAt,
     );
   }
 
@@ -1990,46 +2038,59 @@ class SyncMetaRow extends DataClass implements Insertable<SyncMetaRow> {
   String toString() {
     return (StringBuffer('SyncMetaRow(')
           ..write('id: $id, ')
-          ..write('lastSyncAt: $lastSyncAt')
+          ..write('lastSyncAt: $lastSyncAt, ')
+          ..write('collectionLastSyncAt: $collectionLastSyncAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, lastSyncAt);
+  int get hashCode => Object.hash(id, lastSyncAt, collectionLastSyncAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is SyncMetaRow &&
           other.id == this.id &&
-          other.lastSyncAt == this.lastSyncAt);
+          other.lastSyncAt == this.lastSyncAt &&
+          other.collectionLastSyncAt == this.collectionLastSyncAt);
 }
 
 class SyncMetaCompanion extends UpdateCompanion<SyncMetaRow> {
   final Value<int> id;
   final Value<DateTime?> lastSyncAt;
+  final Value<DateTime?> collectionLastSyncAt;
   const SyncMetaCompanion({
     this.id = const Value.absent(),
     this.lastSyncAt = const Value.absent(),
+    this.collectionLastSyncAt = const Value.absent(),
   });
   SyncMetaCompanion.insert({
     this.id = const Value.absent(),
     this.lastSyncAt = const Value.absent(),
+    this.collectionLastSyncAt = const Value.absent(),
   });
   static Insertable<SyncMetaRow> custom({
     Expression<int>? id,
     Expression<DateTime>? lastSyncAt,
+    Expression<DateTime>? collectionLastSyncAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (lastSyncAt != null) 'last_sync_at': lastSyncAt,
+      if (collectionLastSyncAt != null)
+        'collection_last_sync_at': collectionLastSyncAt,
     });
   }
 
-  SyncMetaCompanion copyWith({Value<int>? id, Value<DateTime?>? lastSyncAt}) {
+  SyncMetaCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime?>? lastSyncAt,
+    Value<DateTime?>? collectionLastSyncAt,
+  }) {
     return SyncMetaCompanion(
       id: id ?? this.id,
       lastSyncAt: lastSyncAt ?? this.lastSyncAt,
+      collectionLastSyncAt: collectionLastSyncAt ?? this.collectionLastSyncAt,
     );
   }
 
@@ -2042,6 +2103,11 @@ class SyncMetaCompanion extends UpdateCompanion<SyncMetaRow> {
     if (lastSyncAt.present) {
       map['last_sync_at'] = Variable<DateTime>(lastSyncAt.value);
     }
+    if (collectionLastSyncAt.present) {
+      map['collection_last_sync_at'] = Variable<DateTime>(
+        collectionLastSyncAt.value,
+      );
+    }
     return map;
   }
 
@@ -2049,7 +2115,791 @@ class SyncMetaCompanion extends UpdateCompanion<SyncMetaRow> {
   String toString() {
     return (StringBuffer('SyncMetaCompanion(')
           ..write('id: $id, ')
-          ..write('lastSyncAt: $lastSyncAt')
+          ..write('lastSyncAt: $lastSyncAt, ')
+          ..write('collectionLastSyncAt: $collectionLastSyncAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CollectionItemsTable extends CollectionItems
+    with TableInfo<$CollectionItemsTable, CollectionItemRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CollectionItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientUuidMeta = const VerificationMeta(
+    'clientUuid',
+  );
+  @override
+  late final GeneratedColumn<String> clientUuid = GeneratedColumn<String>(
+    'client_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _variantIdMeta = const VerificationMeta(
+    'variantId',
+  );
+  @override
+  late final GeneratedColumn<String> variantId = GeneratedColumn<String>(
+    'variant_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _conditionMeta = const VerificationMeta(
+    'condition',
+  );
+  @override
+  late final GeneratedColumn<String> condition = GeneratedColumn<String>(
+    'condition',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('NM'),
+  );
+  static const VerificationMeta _isFoilMeta = const VerificationMeta('isFoil');
+  @override
+  late final GeneratedColumn<bool> isFoil = GeneratedColumn<bool>(
+    'is_foil',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_foil" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> addedAt = GeneratedColumn<DateTime>(
+    'added_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    clientUuid,
+    variantId,
+    quantity,
+    condition,
+    isFoil,
+    notes,
+    addedAt,
+    updatedAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'collection_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CollectionItemRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_uuid')) {
+      context.handle(
+        _clientUuidMeta,
+        clientUuid.isAcceptableOrUnknown(data['client_uuid']!, _clientUuidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_clientUuidMeta);
+    }
+    if (data.containsKey('variant_id')) {
+      context.handle(
+        _variantIdMeta,
+        variantId.isAcceptableOrUnknown(data['variant_id']!, _variantIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_variantIdMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    }
+    if (data.containsKey('condition')) {
+      context.handle(
+        _conditionMeta,
+        condition.isAcceptableOrUnknown(data['condition']!, _conditionMeta),
+      );
+    }
+    if (data.containsKey('is_foil')) {
+      context.handle(
+        _isFoilMeta,
+        isFoil.isAcceptableOrUnknown(data['is_foil']!, _isFoilMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientUuid};
+  @override
+  CollectionItemRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CollectionItemRow(
+      clientUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_uuid'],
+      )!,
+      variantId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}variant_id'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
+      condition: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}condition'],
+      )!,
+      isFoil: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_foil'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}added_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $CollectionItemsTable createAlias(String alias) {
+    return $CollectionItemsTable(attachedDatabase, alias);
+  }
+}
+
+class CollectionItemRow extends DataClass
+    implements Insertable<CollectionItemRow> {
+  final String clientUuid;
+  final String variantId;
+  final int quantity;
+  final String condition;
+  final bool isFoil;
+  final String? notes;
+  final DateTime addedAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  const CollectionItemRow({
+    required this.clientUuid,
+    required this.variantId,
+    required this.quantity,
+    required this.condition,
+    required this.isFoil,
+    this.notes,
+    required this.addedAt,
+    required this.updatedAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_uuid'] = Variable<String>(clientUuid);
+    map['variant_id'] = Variable<String>(variantId);
+    map['quantity'] = Variable<int>(quantity);
+    map['condition'] = Variable<String>(condition);
+    map['is_foil'] = Variable<bool>(isFoil);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['added_at'] = Variable<DateTime>(addedAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  CollectionItemsCompanion toCompanion(bool nullToAbsent) {
+    return CollectionItemsCompanion(
+      clientUuid: Value(clientUuid),
+      variantId: Value(variantId),
+      quantity: Value(quantity),
+      condition: Value(condition),
+      isFoil: Value(isFoil),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      addedAt: Value(addedAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory CollectionItemRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CollectionItemRow(
+      clientUuid: serializer.fromJson<String>(json['clientUuid']),
+      variantId: serializer.fromJson<String>(json['variantId']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      condition: serializer.fromJson<String>(json['condition']),
+      isFoil: serializer.fromJson<bool>(json['isFoil']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      addedAt: serializer.fromJson<DateTime>(json['addedAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientUuid': serializer.toJson<String>(clientUuid),
+      'variantId': serializer.toJson<String>(variantId),
+      'quantity': serializer.toJson<int>(quantity),
+      'condition': serializer.toJson<String>(condition),
+      'isFoil': serializer.toJson<bool>(isFoil),
+      'notes': serializer.toJson<String?>(notes),
+      'addedAt': serializer.toJson<DateTime>(addedAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  CollectionItemRow copyWith({
+    String? clientUuid,
+    String? variantId,
+    int? quantity,
+    String? condition,
+    bool? isFoil,
+    Value<String?> notes = const Value.absent(),
+    DateTime? addedAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => CollectionItemRow(
+    clientUuid: clientUuid ?? this.clientUuid,
+    variantId: variantId ?? this.variantId,
+    quantity: quantity ?? this.quantity,
+    condition: condition ?? this.condition,
+    isFoil: isFoil ?? this.isFoil,
+    notes: notes.present ? notes.value : this.notes,
+    addedAt: addedAt ?? this.addedAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  CollectionItemRow copyWithCompanion(CollectionItemsCompanion data) {
+    return CollectionItemRow(
+      clientUuid: data.clientUuid.present
+          ? data.clientUuid.value
+          : this.clientUuid,
+      variantId: data.variantId.present ? data.variantId.value : this.variantId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      condition: data.condition.present ? data.condition.value : this.condition,
+      isFoil: data.isFoil.present ? data.isFoil.value : this.isFoil,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CollectionItemRow(')
+          ..write('clientUuid: $clientUuid, ')
+          ..write('variantId: $variantId, ')
+          ..write('quantity: $quantity, ')
+          ..write('condition: $condition, ')
+          ..write('isFoil: $isFoil, ')
+          ..write('notes: $notes, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    clientUuid,
+    variantId,
+    quantity,
+    condition,
+    isFoil,
+    notes,
+    addedAt,
+    updatedAt,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CollectionItemRow &&
+          other.clientUuid == this.clientUuid &&
+          other.variantId == this.variantId &&
+          other.quantity == this.quantity &&
+          other.condition == this.condition &&
+          other.isFoil == this.isFoil &&
+          other.notes == this.notes &&
+          other.addedAt == this.addedAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class CollectionItemsCompanion extends UpdateCompanion<CollectionItemRow> {
+  final Value<String> clientUuid;
+  final Value<String> variantId;
+  final Value<int> quantity;
+  final Value<String> condition;
+  final Value<bool> isFoil;
+  final Value<String?> notes;
+  final Value<DateTime> addedAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const CollectionItemsCompanion({
+    this.clientUuid = const Value.absent(),
+    this.variantId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.condition = const Value.absent(),
+    this.isFoil = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.addedAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CollectionItemsCompanion.insert({
+    required String clientUuid,
+    required String variantId,
+    this.quantity = const Value.absent(),
+    this.condition = const Value.absent(),
+    this.isFoil = const Value.absent(),
+    this.notes = const Value.absent(),
+    required DateTime addedAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : clientUuid = Value(clientUuid),
+       variantId = Value(variantId),
+       addedAt = Value(addedAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<CollectionItemRow> custom({
+    Expression<String>? clientUuid,
+    Expression<String>? variantId,
+    Expression<int>? quantity,
+    Expression<String>? condition,
+    Expression<bool>? isFoil,
+    Expression<String>? notes,
+    Expression<DateTime>? addedAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientUuid != null) 'client_uuid': clientUuid,
+      if (variantId != null) 'variant_id': variantId,
+      if (quantity != null) 'quantity': quantity,
+      if (condition != null) 'condition': condition,
+      if (isFoil != null) 'is_foil': isFoil,
+      if (notes != null) 'notes': notes,
+      if (addedAt != null) 'added_at': addedAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CollectionItemsCompanion copyWith({
+    Value<String>? clientUuid,
+    Value<String>? variantId,
+    Value<int>? quantity,
+    Value<String>? condition,
+    Value<bool>? isFoil,
+    Value<String?>? notes,
+    Value<DateTime>? addedAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return CollectionItemsCompanion(
+      clientUuid: clientUuid ?? this.clientUuid,
+      variantId: variantId ?? this.variantId,
+      quantity: quantity ?? this.quantity,
+      condition: condition ?? this.condition,
+      isFoil: isFoil ?? this.isFoil,
+      notes: notes ?? this.notes,
+      addedAt: addedAt ?? this.addedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientUuid.present) {
+      map['client_uuid'] = Variable<String>(clientUuid.value);
+    }
+    if (variantId.present) {
+      map['variant_id'] = Variable<String>(variantId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (condition.present) {
+      map['condition'] = Variable<String>(condition.value);
+    }
+    if (isFoil.present) {
+      map['is_foil'] = Variable<bool>(isFoil.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<DateTime>(addedAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CollectionItemsCompanion(')
+          ..write('clientUuid: $clientUuid, ')
+          ..write('variantId: $variantId, ')
+          ..write('quantity: $quantity, ')
+          ..write('condition: $condition, ')
+          ..write('isFoil: $isFoil, ')
+          ..write('notes: $notes, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SyncQueueTable extends SyncQueue
+    with TableInfo<$SyncQueueTable, SyncQueueRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncQueueTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientUuidMeta = const VerificationMeta(
+    'clientUuid',
+  );
+  @override
+  late final GeneratedColumn<String> clientUuid = GeneratedColumn<String>(
+    'client_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _queuedAtMeta = const VerificationMeta(
+    'queuedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> queuedAt = GeneratedColumn<DateTime>(
+    'queued_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [clientUuid, queuedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_queue';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncQueueRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_uuid')) {
+      context.handle(
+        _clientUuidMeta,
+        clientUuid.isAcceptableOrUnknown(data['client_uuid']!, _clientUuidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_clientUuidMeta);
+    }
+    if (data.containsKey('queued_at')) {
+      context.handle(
+        _queuedAtMeta,
+        queuedAt.isAcceptableOrUnknown(data['queued_at']!, _queuedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_queuedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientUuid};
+  @override
+  SyncQueueRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncQueueRow(
+      clientUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_uuid'],
+      )!,
+      queuedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}queued_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SyncQueueTable createAlias(String alias) {
+    return $SyncQueueTable(attachedDatabase, alias);
+  }
+}
+
+class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
+  final String clientUuid;
+  final DateTime queuedAt;
+  const SyncQueueRow({required this.clientUuid, required this.queuedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_uuid'] = Variable<String>(clientUuid);
+    map['queued_at'] = Variable<DateTime>(queuedAt);
+    return map;
+  }
+
+  SyncQueueCompanion toCompanion(bool nullToAbsent) {
+    return SyncQueueCompanion(
+      clientUuid: Value(clientUuid),
+      queuedAt: Value(queuedAt),
+    );
+  }
+
+  factory SyncQueueRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncQueueRow(
+      clientUuid: serializer.fromJson<String>(json['clientUuid']),
+      queuedAt: serializer.fromJson<DateTime>(json['queuedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientUuid': serializer.toJson<String>(clientUuid),
+      'queuedAt': serializer.toJson<DateTime>(queuedAt),
+    };
+  }
+
+  SyncQueueRow copyWith({String? clientUuid, DateTime? queuedAt}) =>
+      SyncQueueRow(
+        clientUuid: clientUuid ?? this.clientUuid,
+        queuedAt: queuedAt ?? this.queuedAt,
+      );
+  SyncQueueRow copyWithCompanion(SyncQueueCompanion data) {
+    return SyncQueueRow(
+      clientUuid: data.clientUuid.present
+          ? data.clientUuid.value
+          : this.clientUuid,
+      queuedAt: data.queuedAt.present ? data.queuedAt.value : this.queuedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncQueueRow(')
+          ..write('clientUuid: $clientUuid, ')
+          ..write('queuedAt: $queuedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(clientUuid, queuedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncQueueRow &&
+          other.clientUuid == this.clientUuid &&
+          other.queuedAt == this.queuedAt);
+}
+
+class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
+  final Value<String> clientUuid;
+  final Value<DateTime> queuedAt;
+  final Value<int> rowid;
+  const SyncQueueCompanion({
+    this.clientUuid = const Value.absent(),
+    this.queuedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncQueueCompanion.insert({
+    required String clientUuid,
+    required DateTime queuedAt,
+    this.rowid = const Value.absent(),
+  }) : clientUuid = Value(clientUuid),
+       queuedAt = Value(queuedAt);
+  static Insertable<SyncQueueRow> custom({
+    Expression<String>? clientUuid,
+    Expression<DateTime>? queuedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientUuid != null) 'client_uuid': clientUuid,
+      if (queuedAt != null) 'queued_at': queuedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncQueueCompanion copyWith({
+    Value<String>? clientUuid,
+    Value<DateTime>? queuedAt,
+    Value<int>? rowid,
+  }) {
+    return SyncQueueCompanion(
+      clientUuid: clientUuid ?? this.clientUuid,
+      queuedAt: queuedAt ?? this.queuedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientUuid.present) {
+      map['client_uuid'] = Variable<String>(clientUuid.value);
+    }
+    if (queuedAt.present) {
+      map['queued_at'] = Variable<DateTime>(queuedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncQueueCompanion(')
+          ..write('clientUuid: $clientUuid, ')
+          ..write('queuedAt: $queuedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
@@ -2062,6 +2912,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CardsTable cards = $CardsTable(this);
   late final $VariantsTable variants = $VariantsTable(this);
   late final $SyncMetaTable syncMeta = $SyncMetaTable(this);
+  late final $CollectionItemsTable collectionItems = $CollectionItemsTable(
+    this,
+  );
+  late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2071,6 +2925,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cards,
     variants,
     syncMeta,
+    collectionItems,
+    syncQueue,
   ];
 }
 
@@ -2962,9 +3818,17 @@ typedef $$VariantsTableProcessedTableManager =
       PrefetchHooks Function()
     >;
 typedef $$SyncMetaTableCreateCompanionBuilder =
-    SyncMetaCompanion Function({Value<int> id, Value<DateTime?> lastSyncAt});
+    SyncMetaCompanion Function({
+      Value<int> id,
+      Value<DateTime?> lastSyncAt,
+      Value<DateTime?> collectionLastSyncAt,
+    });
 typedef $$SyncMetaTableUpdateCompanionBuilder =
-    SyncMetaCompanion Function({Value<int> id, Value<DateTime?> lastSyncAt});
+    SyncMetaCompanion Function({
+      Value<int> id,
+      Value<DateTime?> lastSyncAt,
+      Value<DateTime?> collectionLastSyncAt,
+    });
 
 class $$SyncMetaTableFilterComposer
     extends Composer<_$AppDatabase, $SyncMetaTable> {
@@ -2982,6 +3846,11 @@ class $$SyncMetaTableFilterComposer
 
   ColumnFilters<DateTime> get lastSyncAt => $composableBuilder(
     column: $table.lastSyncAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get collectionLastSyncAt => $composableBuilder(
+    column: $table.collectionLastSyncAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3004,6 +3873,11 @@ class $$SyncMetaTableOrderingComposer
     column: $table.lastSyncAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get collectionLastSyncAt => $composableBuilder(
+    column: $table.collectionLastSyncAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncMetaTableAnnotationComposer
@@ -3020,6 +3894,11 @@ class $$SyncMetaTableAnnotationComposer
 
   GeneratedColumn<DateTime> get lastSyncAt => $composableBuilder(
     column: $table.lastSyncAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get collectionLastSyncAt => $composableBuilder(
+    column: $table.collectionLastSyncAt,
     builder: (column) => column,
   );
 }
@@ -3057,12 +3936,22 @@ class $$SyncMetaTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<DateTime?> lastSyncAt = const Value.absent(),
-              }) => SyncMetaCompanion(id: id, lastSyncAt: lastSyncAt),
+                Value<DateTime?> collectionLastSyncAt = const Value.absent(),
+              }) => SyncMetaCompanion(
+                id: id,
+                lastSyncAt: lastSyncAt,
+                collectionLastSyncAt: collectionLastSyncAt,
+              ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 Value<DateTime?> lastSyncAt = const Value.absent(),
-              }) => SyncMetaCompanion.insert(id: id, lastSyncAt: lastSyncAt),
+                Value<DateTime?> collectionLastSyncAt = const Value.absent(),
+              }) => SyncMetaCompanion.insert(
+                id: id,
+                lastSyncAt: lastSyncAt,
+                collectionLastSyncAt: collectionLastSyncAt,
+              ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
@@ -3085,6 +3974,435 @@ typedef $$SyncMetaTableProcessedTableManager =
       SyncMetaRow,
       PrefetchHooks Function()
     >;
+typedef $$CollectionItemsTableCreateCompanionBuilder =
+    CollectionItemsCompanion Function({
+      required String clientUuid,
+      required String variantId,
+      Value<int> quantity,
+      Value<String> condition,
+      Value<bool> isFoil,
+      Value<String?> notes,
+      required DateTime addedAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$CollectionItemsTableUpdateCompanionBuilder =
+    CollectionItemsCompanion Function({
+      Value<String> clientUuid,
+      Value<String> variantId,
+      Value<int> quantity,
+      Value<String> condition,
+      Value<bool> isFoil,
+      Value<String?> notes,
+      Value<DateTime> addedAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+
+class $$CollectionItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $CollectionItemsTable> {
+  $$CollectionItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get variantId => $composableBuilder(
+    column: $table.variantId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get condition => $composableBuilder(
+    column: $table.condition,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFoil => $composableBuilder(
+    column: $table.isFoil,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CollectionItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CollectionItemsTable> {
+  $$CollectionItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get variantId => $composableBuilder(
+    column: $table.variantId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get condition => $composableBuilder(
+    column: $table.condition,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isFoil => $composableBuilder(
+    column: $table.isFoil,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CollectionItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CollectionItemsTable> {
+  $$CollectionItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get variantId =>
+      $composableBuilder(column: $table.variantId, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<String> get condition =>
+      $composableBuilder(column: $table.condition, builder: (column) => column);
+
+  GeneratedColumn<bool> get isFoil =>
+      $composableBuilder(column: $table.isFoil, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$CollectionItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CollectionItemsTable,
+          CollectionItemRow,
+          $$CollectionItemsTableFilterComposer,
+          $$CollectionItemsTableOrderingComposer,
+          $$CollectionItemsTableAnnotationComposer,
+          $$CollectionItemsTableCreateCompanionBuilder,
+          $$CollectionItemsTableUpdateCompanionBuilder,
+          (
+            CollectionItemRow,
+            BaseReferences<
+              _$AppDatabase,
+              $CollectionItemsTable,
+              CollectionItemRow
+            >,
+          ),
+          CollectionItemRow,
+          PrefetchHooks Function()
+        > {
+  $$CollectionItemsTableTableManager(
+    _$AppDatabase db,
+    $CollectionItemsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CollectionItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CollectionItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CollectionItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> clientUuid = const Value.absent(),
+                Value<String> variantId = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
+                Value<String> condition = const Value.absent(),
+                Value<bool> isFoil = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> addedAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CollectionItemsCompanion(
+                clientUuid: clientUuid,
+                variantId: variantId,
+                quantity: quantity,
+                condition: condition,
+                isFoil: isFoil,
+                notes: notes,
+                addedAt: addedAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientUuid,
+                required String variantId,
+                Value<int> quantity = const Value.absent(),
+                Value<String> condition = const Value.absent(),
+                Value<bool> isFoil = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                required DateTime addedAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CollectionItemsCompanion.insert(
+                clientUuid: clientUuid,
+                variantId: variantId,
+                quantity: quantity,
+                condition: condition,
+                isFoil: isFoil,
+                notes: notes,
+                addedAt: addedAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CollectionItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CollectionItemsTable,
+      CollectionItemRow,
+      $$CollectionItemsTableFilterComposer,
+      $$CollectionItemsTableOrderingComposer,
+      $$CollectionItemsTableAnnotationComposer,
+      $$CollectionItemsTableCreateCompanionBuilder,
+      $$CollectionItemsTableUpdateCompanionBuilder,
+      (
+        CollectionItemRow,
+        BaseReferences<_$AppDatabase, $CollectionItemsTable, CollectionItemRow>,
+      ),
+      CollectionItemRow,
+      PrefetchHooks Function()
+    >;
+typedef $$SyncQueueTableCreateCompanionBuilder =
+    SyncQueueCompanion Function({
+      required String clientUuid,
+      required DateTime queuedAt,
+      Value<int> rowid,
+    });
+typedef $$SyncQueueTableUpdateCompanionBuilder =
+    SyncQueueCompanion Function({
+      Value<String> clientUuid,
+      Value<DateTime> queuedAt,
+      Value<int> rowid,
+    });
+
+class $$SyncQueueTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncQueueTable> {
+  $$SyncQueueTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get queuedAt => $composableBuilder(
+    column: $table.queuedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyncQueueTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncQueueTable> {
+  $$SyncQueueTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get queuedAt => $composableBuilder(
+    column: $table.queuedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyncQueueTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncQueueTable> {
+  $$SyncQueueTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get queuedAt =>
+      $composableBuilder(column: $table.queuedAt, builder: (column) => column);
+}
+
+class $$SyncQueueTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyncQueueTable,
+          SyncQueueRow,
+          $$SyncQueueTableFilterComposer,
+          $$SyncQueueTableOrderingComposer,
+          $$SyncQueueTableAnnotationComposer,
+          $$SyncQueueTableCreateCompanionBuilder,
+          $$SyncQueueTableUpdateCompanionBuilder,
+          (
+            SyncQueueRow,
+            BaseReferences<_$AppDatabase, $SyncQueueTable, SyncQueueRow>,
+          ),
+          SyncQueueRow,
+          PrefetchHooks Function()
+        > {
+  $$SyncQueueTableTableManager(_$AppDatabase db, $SyncQueueTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncQueueTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncQueueTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncQueueTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> clientUuid = const Value.absent(),
+                Value<DateTime> queuedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncQueueCompanion(
+                clientUuid: clientUuid,
+                queuedAt: queuedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientUuid,
+                required DateTime queuedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => SyncQueueCompanion.insert(
+                clientUuid: clientUuid,
+                queuedAt: queuedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyncQueueTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyncQueueTable,
+      SyncQueueRow,
+      $$SyncQueueTableFilterComposer,
+      $$SyncQueueTableOrderingComposer,
+      $$SyncQueueTableAnnotationComposer,
+      $$SyncQueueTableCreateCompanionBuilder,
+      $$SyncQueueTableUpdateCompanionBuilder,
+      (
+        SyncQueueRow,
+        BaseReferences<_$AppDatabase, $SyncQueueTable, SyncQueueRow>,
+      ),
+      SyncQueueRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3096,4 +4414,8 @@ class $AppDatabaseManager {
       $$VariantsTableTableManager(_db, _db.variants);
   $$SyncMetaTableTableManager get syncMeta =>
       $$SyncMetaTableTableManager(_db, _db.syncMeta);
+  $$CollectionItemsTableTableManager get collectionItems =>
+      $$CollectionItemsTableTableManager(_db, _db.collectionItems);
+  $$SyncQueueTableTableManager get syncQueue =>
+      $$SyncQueueTableTableManager(_db, _db.syncQueue);
 }

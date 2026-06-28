@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'data/auth/auth_repository.dart';
+import 'data/auth/auth_storage.dart';
 import 'data/catalog_repository.dart';
+import 'data/collection_repository.dart';
+import 'data/collection_sync_service.dart';
 import 'data/local/database.dart';
 import 'data/remote/api_client.dart';
 import 'data/sync_service.dart';
@@ -12,7 +16,44 @@ final databaseProvider = Provider<AppDatabase>((ref) {
   return db;
 });
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+final authStorageProvider = Provider<AuthStorage>((ref) => AuthStorage());
+
+final apiClientProvider =
+    Provider<ApiClient>((ref) => ApiClient(ref.watch(authStorageProvider)));
+
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => AuthRepository(ref.watch(apiClientProvider), ref.watch(authStorageProvider)),
+);
+
+final collectionRepositoryProvider = Provider<CollectionRepository>(
+  (ref) => CollectionRepository(ref.watch(databaseProvider)),
+);
+
+final collectionSyncServiceProvider = Provider<CollectionSyncService>(
+  (ref) => CollectionSyncService(ref.watch(databaseProvider), ref.watch(apiClientProvider)),
+);
+
+/// Active collection filter.
+final collectionFilterProvider =
+    NotifierProvider<CollectionFilterNotifier, CollectionFilter>(CollectionFilterNotifier.new);
+
+class CollectionFilterNotifier extends Notifier<CollectionFilter> {
+  @override
+  CollectionFilter build() => const CollectionFilter();
+  void setQuery(String q) => state = state.copyWith(query: q);
+  void setSort(CollectionSort s) => state = state.copyWith(sort: s);
+  void setCondition(String? c) => state = state.copyWith(condition: c);
+}
+
+final collectionEntriesProvider = StreamProvider<List<CollectionEntry>>((ref) {
+  final filter = ref.watch(collectionFilterProvider);
+  return ref.watch(collectionRepositoryProvider).watch(filter);
+});
+
+final collectionStatsProvider =
+    StreamProvider<({int count, int copies, double value})>(
+  (ref) => ref.watch(collectionRepositoryProvider).watchStats(),
+);
 
 final catalogRepositoryProvider = Provider<CatalogRepository>(
   (ref) => CatalogRepository(ref.watch(databaseProvider)),

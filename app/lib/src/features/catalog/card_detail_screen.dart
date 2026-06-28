@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/auth/auth_controller.dart';
 import '../../data/local/database.dart';
 import '../../providers.dart';
 import '../../util/format.dart';
+import '../collection/add_to_collection_sheet.dart';
 import 'widgets/card_thumb.dart';
 
 /// Per-card detail: card stats + every printing (variant) with its price.
@@ -48,7 +50,7 @@ class CardDetailScreen extends ConsumerWidget {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Text('Error: $e'),
                 data: (vs) => Column(
-                  children: [for (final v in vs) _VariantRow(variant: v)],
+                  children: [for (final v in vs) _VariantRow(variant: v, cardName: c.name)],
                 ),
               ),
             ],
@@ -97,13 +99,15 @@ class _CardHeader extends StatelessWidget {
   }
 }
 
-class _VariantRow extends StatelessWidget {
-  const _VariantRow({required this.variant});
+class _VariantRow extends ConsumerWidget {
+  const _VariantRow({required this.variant, required this.cardName});
   final CatalogVariant variant;
+  final String cardName;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final authed = ref.watch(authControllerProvider).isAuthenticated;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
@@ -138,6 +142,18 @@ class _VariantRow extends StatelessWidget {
             Text(
               formatUsd(variant.marketPrice),
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            IconButton(
+              tooltip: authed ? 'Add to collection' : 'Sign in to add',
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: () {
+                if (authed) {
+                  AddToCollectionSheet.show(context,
+                      variantId: variant.variantId, title: '$cardName · ${variant.variantId}');
+                } else {
+                  context.go('/login');
+                }
+              },
             ),
           ],
         ),
