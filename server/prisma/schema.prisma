@@ -114,7 +114,10 @@ model Price {
   lowPrice    Decimal?    @map("low_price") @db.Decimal(12, 2)
   capturedAt  DateTime    @map("captured_at")
 
-  @@index([variantId, source, currency, capturedAt])
+  // One snapshot per variant/source/currency/capture — makes ingest idempotent
+  // per scrape while remaining append-only across captures (price history).
+  // This unique index also serves "latest price per variant/source" lookups.
+  @@unique([variantId, source, currency, capturedAt])
   @@map("price")
 }
 

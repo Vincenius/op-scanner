@@ -1,25 +1,55 @@
 /**
- * Card-data ingestion entrypoint (Phase 0 stub).
+ * Card-data ingestion entrypoint.
  *
- * Phase 1 wires up the pluggable {@link CardSource} pipeline: fetch sets /
- * cards / variants / prices from an upstream source, upsert them into Postgres
- * (one `card_variant` row per printing, including alt-arts), and — in Phase 3 —
- * precompute the RGB pHash for every variant image to the spec in
- * /shared/HASHING.md. It is runnable standalone as a cron/job.
+ *   npm run ingest            # live: apitcg (metadata/images) + optcgapi (prices)
+ *   npm run ingest fixture    # offline sample data (no network/keys)
+ *
+ * Env: APITCG_API_KEY (required for the live profile), DATABASE_URL.
+ * Phase 3 adds pHash precompute over the ingested variant images.
  */
+import 'dotenv/config';
+import { prisma } from './db.js';
+import { runIngest, type IngestConfig } from './pipeline/run.js';
+import { ApiTcgSource } from './sources/apitcg.js';
+import { OptcgApiSource } from './sources/optcgapi.js';
+import { FixtureSource } from './sources/fixture.js';
 
-import type { CardSource } from './sources/types.js';
-
-// Registry of available sources. Phase 1 registers the first concrete source.
-const sources: Record<string, () => CardSource> = {};
-
-async function main(): Promise<void> {
-  const requested = process.argv[2];
-  console.log('[ingest] Phase 0 stub — ingestion pipeline lands in Phase 1.');
-  if (requested) {
-    console.log(`[ingest] requested source: ${requested}`);
+function buildConfig(profile: string): IngestConfig {
+  switch (profile) {
+    case 'fixture': {
+      const source = new FixtureSource();
+      return { metadata: source, prices: source };
+    }
+    case 'live':
+    case undefined:
+    case '': {
+      const apiKey = process.env.APITCG_API_KEY;
+      if (!apiKey) {
+        throw new Error(
+          'APITCG_API_KEY is required for the live profile. Set it in ingest/.env (or run `npm run ingest fixture`).',
+        );
+      }
+      return {
+        metadata: new ApiTcgSource({ apiKey }),
+        prices: new OptcgApiSource(),
+      };
+    }
+    default:
+      throw new Error(`Unknown ingest profile "${profile}" (use "live" or "fixture")`);
   }
-  console.log(`[ingest] registered sources: ${Object.keys(sources).join(', ') || '(none yet)'}`);
 }
 
-void main();
+async function main(): Promise<void> {
+  const profile = process.argv[2] ?? 'live';
+  const config = buildConfig(profile);
+  await runIngest(config);
+}
+
+main()
+  .catch((err) => {
+    console.error('[ingest] failed:', err);
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    void prisma.$disconnect();
+  });
