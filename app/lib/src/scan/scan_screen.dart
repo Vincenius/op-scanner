@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
+import '../data/catalog_repository.dart';
 import '../data/collection_controller.dart';
 import '../data/local/database.dart';
 import '../providers.dart';
@@ -13,18 +14,25 @@ import '../util/format.dart';
 import '../features/catalog/widgets/card_thumb.dart';
 import 'matcher.dart';
 import 'phash.dart';
-import 'rectifier.dart';
+import 'process_frame.dart';
 import 'scan_controller.dart';
 
 // Card code formats: OP01-016, ST14-001, EB02-061, P-001 (promo).
 final _codeRegex = RegExp(r'\b((?:OP|ST|EB)\d{2}-\d{3}|P-\d{3})\b', caseSensitive: false);
 
+// Require the same card across this many consecutive frames before adding.
+const int _stableNeeded = 2;
+// Empty/no-match frames before the same card may be added again.
+const int _resetAfterEmpty = 3;
+const Duration _frameGap = Duration(milliseconds: 250);
+
 class _ScanOutcome {
-  _ScanOutcome(this.result, this.code, this.topVariant, this.topName);
+  _ScanOutcome(this.result, this.code, this.topVariant, this.topName, this.added);
   final MatchResult result;
   final String? code;
   final CatalogVariant? topVariant;
   final String? topName;
+  final bool added;
 }
 
 class ScanScreen extends ConsumerStatefulWidget {
@@ -37,14 +45,33 @@ class ScanScreen extends ConsumerStatefulWidget {
 class _ScanScreenState extends ConsumerState<ScanScreen> {
   CameraController? _camera;
   final TextRecognizer _recognizer = TextRecognizer(script: TextRecognitionScript.latin);
-  bool _busy = false;
+  Map<String, String> _db = const {};
+  bool _scanning = false;
+  bool _processing = false;
   String? _error;
   _ScanOutcome? _outcome;
+
+  // Stability / debounce state.
+  String? _stableVariant;
+  int _stableCount = 0;
+  String? _lastAddedVariant;
+  int _emptyFrames = 0;
 
   @override
   void initState() {
     super.initState();
-    _initCamera();
+    _start();
+  }
+
+  Future<void> _start() async {
+    _db = await ref.read(scanDbProvider.future);
+    await _initCamera();
+    if (_camera != null && _db.isNotEmpty) {
+      _scanning = true;
+      _loop();
+    } else if (_db.isEmpty) {
+      setState(() => _error = 'No recognition data yet — sync the catalog first.');
+    }
   }
 
   Future<void> _initCamera() async {
@@ -68,70 +95,99 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
 
   @override
   void dispose() {
+    _scanning = false;
     _camera?.dispose();
     _recognizer.close();
     super.dispose();
   }
 
-  Future<String?> _ocrCode(String path) async {
-    try {
-      final recognized = await _recognizer.processImage(InputImage.fromFilePath(path));
-      final match = _codeRegex.firstMatch(recognized.text);
-      return match?.group(0)?.toUpperCase();
-    } catch (_) {
-      return null;
+  /// Continuous auto-capture loop (no manual tap). Each tick captures a frame,
+  /// recognizes it, and auto-adds confident, stable, not-just-added cards.
+  Future<void> _loop() async {
+    while (_scanning && mounted) {
+      final camera = _camera;
+      if (camera != null && camera.value.isInitialized && !_processing) {
+        await _tick(camera);
+      }
+      await Future.delayed(_frameGap);
     }
   }
 
-  Future<void> _scan() async {
-    final camera = _camera;
-    if (_busy || camera == null || !camera.value.isInitialized) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
+  Future<void> _tick(CameraController camera) async {
+    _processing = true;
     try {
-      final db = await ref.read(scanDbProvider.future);
-      if (db.isEmpty) {
-        setState(() => _error = 'No recognition data yet — sync the catalog first.');
-        return;
-      }
       final shot = await camera.takePicture();
       final bytes = await File(shot.path).readAsBytes();
       final code = await _ocrCode(shot.path);
+      try {
+        await File(shot.path).delete();
+      } catch (_) {}
 
-      final rgb = rectifyToRgb(bytes);
+      final rgb = rectifyPhoto(bytes);
       if (rgb == null) {
-        setState(() => _error = 'Could not read the photo.');
+        _onNoMatch();
         return;
       }
-
       final repo = ref.read(catalogRepositoryProvider);
       final restrict = code != null ? await repo.variantIdsForCode(code) : null;
-      final result = matchHash(phashFromRgb(rgb), db, restrictTo: (restrict?.isEmpty ?? true) ? null : restrict);
-
-      final top = result.top1;
-      CatalogVariant? topVariant;
-      String? topName;
-      if (top != null) {
-        topVariant = await repo.variantById(top.variantId);
-        if (topVariant != null) {
-          topName = (await repo.cardById(topVariant.cardId))?.name;
-        }
-      }
-      final outcome = _ScanOutcome(result, code, topVariant, topName);
-
-      // Rapid-add: auto-add a confident match and keep scanning.
-      if (ref.read(rapidAddProvider) && result.accepted && top != null) {
-        await _add(top.variantId, topName ?? top.variantId);
-        setState(() => _outcome = outcome);
-      } else {
-        setState(() => _outcome = outcome);
-      }
+      final result = matchHash(
+        phashFromRgb(rgb),
+        _db,
+        restrictTo: (restrict?.isEmpty ?? true) ? null : restrict,
+      );
+      await _onResult(result, code, repo);
     } catch (e) {
-      setState(() => _error = 'Scan failed: $e');
+      // Transient capture/decode errors shouldn't stop the loop.
     } finally {
-      if (mounted) setState(() => _busy = false);
+      _processing = false;
+    }
+  }
+
+  Future<void> _onResult(MatchResult result, String? code, CatalogRepository repo) async {
+    final top = result.top1;
+    if (!result.accepted || top == null) {
+      _onNoMatch();
+      return;
+    }
+    _emptyFrames = 0;
+    if (top.variantId == _stableVariant) {
+      _stableCount++;
+    } else {
+      _stableVariant = top.variantId;
+      _stableCount = 1;
+    }
+
+    final variant = await repo.variantById(top.variantId);
+    final name = variant != null ? (await repo.cardById(variant.cardId))?.name : null;
+
+    var added = false;
+    final shouldAdd = _stableCount >= _stableNeeded && top.variantId != _lastAddedVariant;
+    if (shouldAdd && ref.read(rapidAddProvider)) {
+      await _add(top.variantId, name ?? top.variantId);
+      _lastAddedVariant = top.variantId;
+      added = true;
+    }
+    if (mounted) {
+      setState(() => _outcome = _ScanOutcome(result, code, variant, name, added));
+    }
+  }
+
+  void _onNoMatch() {
+    _emptyFrames++;
+    _stableVariant = null;
+    _stableCount = 0;
+    if (_emptyFrames >= _resetAfterEmpty) {
+      _lastAddedVariant = null;
+      if (mounted && _outcome != null) setState(() => _outcome = null);
+    }
+  }
+
+  Future<String?> _ocrCode(String path) async {
+    try {
+      final recognized = await _recognizer.processImage(InputImage.fromFilePath(path));
+      return _codeRegex.firstMatch(recognized.text)?.group(0)?.toUpperCase();
+    } catch (_) {
+      return null;
     }
   }
 
@@ -140,7 +196,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     await ref.read(collectionActionsProvider).addScanned(variantId, tagClientUuid: tag);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Added $label'), duration: const Duration(milliseconds: 900)),
+        SnackBar(content: Text('Added $label'), duration: const Duration(milliseconds: 800)),
       );
     }
   }
@@ -160,7 +216,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         title: const Text('Scan'),
         actions: [
           Row(children: [
-            const Text('Rapid', style: TextStyle(fontSize: 13)),
+            const Text('Auto-add', style: TextStyle(fontSize: 13)),
             Switch(value: rapid, onChanged: (_) => ref.read(rapidAddProvider.notifier).toggle()),
           ]),
         ],
@@ -185,12 +241,11 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       fit: StackFit.expand,
       children: [
         CameraPreview(camera),
-        // Card-aspect alignment guide.
         Center(
           child: AspectRatio(
             aspectRatio: 600 / 838,
             child: Container(
-              margin: const EdgeInsets.all(32),
+              margin: const EdgeInsets.all(28),
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.white70, width: 2),
                 borderRadius: BorderRadius.circular(12),
@@ -198,7 +253,15 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             ),
           ),
         ),
-        if (_busy) const Center(child: CircularProgressIndicator()),
+        const Positioned(
+          top: 12,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Text('Point at a card — scanning automatically',
+                style: TextStyle(color: Colors.white70, fontSize: 12)),
+          ),
+        ),
       ],
     );
   }
@@ -213,14 +276,13 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         children: [
           if (_error != null && _camera != null)
             Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_error!, style: const TextStyle(color: Colors.orangeAccent))),
-          if (outcome != null) _ResultCard(outcome: outcome, onAdd: _add),
-          const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: _busy ? null : _scan,
-            icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('Scan card'),
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          ),
+          if (outcome != null && outcome.topVariant != null)
+            _ResultCard(outcome: outcome, onAdd: _add)
+          else
+            const SizedBox(
+              height: 48,
+              child: Center(child: Text('Searching…', style: TextStyle(color: Colors.white54))),
+            ),
         ],
       ),
     );
@@ -234,18 +296,16 @@ class _ResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final top = outcome.result.top1;
-    if (top == null || outcome.topVariant == null) {
-      return const Card(child: Padding(padding: EdgeInsets.all(12), child: Text('No match found. Try re-framing the card.')));
-    }
+    final top = outcome.result.top1!;
     final v = outcome.topVariant!;
     final name = outcome.topName ?? v.variantId;
     return Card(
+      color: outcome.added ? Colors.green.shade100 : null,
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Row(
           children: [
-            SizedBox(width: 44, height: 62, child: ClipRRect(borderRadius: BorderRadius.circular(4), child: CardThumb(thumbPath: v.thumbUrl))),
+            SizedBox(width: 40, height: 56, child: ClipRRect(borderRadius: BorderRadius.circular(4), child: CardThumb(thumbPath: v.thumbUrl))),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -253,15 +313,17 @@ class _ResultCard extends StatelessWidget {
                 children: [
                   Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
                   Text('${v.variantId}'
-                      '${outcome.result.accepted ? '' : '  · confirm?'}'
-                      '${outcome.code != null ? '  · OCR ${outcome.code}' : ''}'
-                      '  · d=${top.distance}'),
+                      '${outcome.code != null ? ' · OCR ${outcome.code}' : ''}'
+                      ' · d=${top.distance}'),
                 ],
               ),
             ),
             Text(formatUsd(v.marketPrice)),
             const SizedBox(width: 8),
-            FilledButton(onPressed: () => onAdd(v.variantId, name), child: const Text('Add')),
+            if (outcome.added)
+              const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.check_circle, color: Colors.green))
+            else
+              FilledButton(onPressed: () => onAdd(v.variantId, name), child: const Text('Add')),
           ],
         ),
       ),
