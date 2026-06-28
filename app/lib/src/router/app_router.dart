@@ -5,6 +5,7 @@ import '../features/auth/login_screen.dart';
 import '../features/catalog/card_detail_screen.dart';
 import '../features/collection/collection_stats_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/share/public_collection_screen.dart';
 import '../features/shell/home_shell.dart';
 import '../scan/scan_entry.dart';
 
@@ -44,6 +45,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/collection/stats',
         name: 'collection-stats',
         builder: (context, state) => const CollectionStatsScreen(),
+      ),
+      GoRoute(
+        path: '/share/:slug',
+        name: 'share',
+        builder: (context, state) =>
+            PublicCollectionScreen(slug: state.pathParameters['slug']!),
       ),
     ],
   );

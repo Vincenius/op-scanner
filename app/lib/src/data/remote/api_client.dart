@@ -132,6 +132,26 @@ class ApiClient {
     return res.data ?? const [];
   }
 
+  // --- Share ---
+  Future<String?> shareStatus() async {
+    final res = await _dio.get<Map<String, dynamic>>('/share');
+    return res.data?['slug'] as String?;
+  }
+
+  Future<String> enableShare() async {
+    final res = await _dio.post<Map<String, dynamic>>('/share');
+    return res.data!['slug'] as String;
+  }
+
+  Future<void> disableShare() async {
+    await _dio.delete<void>('/share');
+  }
+
+  Future<Map<String, dynamic>> publicCollection(String slug) async {
+    final res = await _dio.get<Map<String, dynamic>>('/share/$slug');
+    return res.data!;
+  }
+
   // --- Collection ---
   Future<Map<String, dynamic>> collectionSync(
     DateTime? since,

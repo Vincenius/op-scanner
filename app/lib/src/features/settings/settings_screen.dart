@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,7 @@ import '../../core/platform.dart';
 import '../../data/auth/auth_controller.dart';
 import '../../providers.dart';
 import '../../util/format.dart';
+import '../share/share_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -47,6 +49,11 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: const Text('Track and sync your collection'),
               onTap: () => context.go('/login'),
             ),
+          if (auth.isAuthenticated) ...[
+            const Divider(),
+            const _SectionHeader('Share'),
+            const _ShareSection(),
+          ],
           const Divider(),
           const _SectionHeader('Catalog'),
           ListTile(
@@ -87,6 +94,71 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ShareSection extends ConsumerWidget {
+  const _ShareSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(shareStatusProvider);
+    final controller = ref.read(shareControllerProvider);
+    return status.when(
+      loading: () => const ListTile(
+        leading: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+        title: Text('Public share'),
+      ),
+      error: (e, _) => const ListTile(
+        leading: Icon(Icons.public_off),
+        title: Text('Share unavailable'),
+        subtitle: Text('Connect to manage sharing'),
+      ),
+      data: (slug) {
+        return Column(
+          children: [
+            SwitchListTile(
+              secondary: const Icon(Icons.public),
+              title: const Text('Public share link'),
+              subtitle: Text(slug == null
+                  ? 'Off — others can\'t see your collection'
+                  : 'On — anyone with the link can view your collection'),
+              value: slug != null,
+              onChanged: (on) => on ? controller.enable() : controller.disable(),
+            ),
+            if (slug != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SelectableText(shareLink(slug),
+                          maxLines: 1, style: Theme.of(context).textTheme.bodySmall),
+                    ),
+                    IconButton(
+                      tooltip: 'Copy link',
+                      icon: const Icon(Icons.copy, size: 20),
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: shareLink(slug)));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Link copied')),
+                          );
+                        }
+                      },
+                    ),
+                    IconButton(
+                      tooltip: 'Open',
+                      icon: const Icon(Icons.open_in_new, size: 20),
+                      onPressed: () => context.go('/share/$slug'),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

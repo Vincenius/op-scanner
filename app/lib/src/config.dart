@@ -8,6 +8,10 @@ class AppConfig {
     defaultValue: 'http://localhost:3000',
   );
 
+  /// Base URL of the web app, used to build shareable links on mobile (on web
+  /// the current origin is used instead). e.g. https://cards.example.com
+  static const String webBaseUrl = String.fromEnvironment('WEB_BASE_URL', defaultValue: '');
+
   /// Resolve a server-relative image/proxy path to an absolute URL.
   static String imageUrl(String path) => '$apiBaseUrl$path';
 }

@@ -147,6 +147,32 @@ export interface CollectionSyncResponse {
   items: CollectionItemDto[];
 }
 
+// --- Public share ---
+
+export interface ShareStatus {
+  slug: string | null;
+}
+
+export interface PublicCollectionItem {
+  variantId: string;
+  cardCode: string;
+  name: string;
+  setCode: string;
+  thumbUrl: string;
+  rarity: string | null;
+  isAltArt: boolean;
+  variantLabel: string | null;
+  quantity: number;
+  condition: CardCondition;
+  marketPrice: number | null;
+  tags: string[];
+}
+
+export interface PublicCollectionResponse {
+  summary: { entries: number; copies: number; value: number };
+  items: PublicCollectionItem[];
+}
+
 /** Rich collection entry for GET /collection (joined with catalog + price). */
 export interface CollectionEntryDto extends CollectionItemDto {
   card: { id: string; name: string; cardCode: string; setCode: string; colors: string[]; type: CardType };

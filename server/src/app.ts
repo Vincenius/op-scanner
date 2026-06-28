@@ -10,6 +10,7 @@ import catalogRoutes from './routes/catalog.js';
 import imageRoutes from './routes/images.js';
 import authRoutes from './routes/auth.js';
 import collectionRoutes from './routes/collection.js';
+import shareRoutes from './routes/share.js';
 
 /**
  * Builds and configures the Fastify application (without starting it), so it
@@ -41,6 +42,7 @@ export async function buildApp(): Promise<FastifyInstance> {
         { name: 'images', description: 'Proxied card images' },
         { name: 'auth', description: 'Registration, login, token rotation' },
         { name: 'collection', description: 'User collection + offline sync' },
+        { name: 'share', description: 'Public read-only collection sharing' },
       ],
       components: {
         securitySchemes: {
@@ -60,6 +62,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(imageRoutes);
   await app.register(authRoutes);
   await app.register(collectionRoutes);
+  await app.register(shareRoutes);
 
   return app;
 }
