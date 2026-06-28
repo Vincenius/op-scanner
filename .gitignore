@@ -1,0 +1,39 @@
+# --- Node / TypeScript ---
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Prisma ---
+# migrations ARE committed; nothing to ignore here yet
+
+# --- Flutter / Dart ---
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/build/
+app/.idea/
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/android/app/debug
+app/android/app/profile
+app/android/app/release
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Flutter.framework
+app/ios/Flutter/Flutter.podspec
+app/macos/Pods/
+*.iml
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/

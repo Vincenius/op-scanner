@@ -1,0 +1,22 @@
+{
+  "name": "op-scanner",
+  "version": "0.0.0",
+  "private": true,
+  "description": "One Piece TCG collection manager — monorepo (Flutter client + Fastify API + ingestion).",
+  "workspaces": [
+    "shared",
+    "server",
+    "ingest"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:server": "npm run dev -w @op-scanner/server",
+    "ingest": "npm run start -w @op-scanner/ingest",
+    "prisma:generate": "npm run prisma:generate -w @op-scanner/server",
+    "prisma:migrate": "npm run prisma:migrate -w @op-scanner/server"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
