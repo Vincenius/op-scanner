@@ -1,0 +1,172 @@
+// Prisma schema for OP Scanner.
+//
+// Catalog tables (set / card / card_variant / price) are read-mostly and
+// populated by the /ingest job. User tables (user / collection_item /
+// refresh_token) are written by the API.
+//
+// Pricing is modelled as append-only ROWS keyed by {variant, source, currency,
+// captured_at} — never as columns on the card — so a second marketplace/currency
+// (e.g. Cardmarket EUR) can be added later with zero schema migration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CardType {
+  LEADER
+  CHARACTER
+  EVENT
+  STAGE
+  DON
+}
+
+enum CardCondition {
+  NM
+  LP
+  MP
+  HP
+  DMG
+}
+
+// ---------------------------------------------------------------------------
+// Catalog (populated by /ingest)
+// ---------------------------------------------------------------------------
+
+model Set {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  name        String
+  releaseDate DateTime? @map("release_date")
+  cards       Card[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("set")
+}
+
+model Card {
+  id          String        @id @default(cuid())
+  // Base printed card code, e.g. "OP03-070". Unique per base card identity;
+  // distinct printings (alt-arts) hang off this via CardVariant.
+  cardCode    String        @unique @map("card_code")
+  name        String
+  colors      String[]
+  type        CardType
+  cost        Int?
+  power       Int?
+  counter     Int?
+  attribute   String?
+  family      String?
+  abilityText String?       @map("ability_text")
+  triggerText String?       @map("trigger_text")
+  setId       String        @map("set_id")
+  set         Set           @relation(fields: [setId], references: [id], onDelete: Cascade)
+  variants    CardVariant[]
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@index([setId])
+  @@index([type])
+  @@map("card")
+}
+
+// The unit everything hangs off: one row per printing (base, parallel/alt-art,
+// manga rare, ...). Recognition (phash) and pricing both operate here.
+model CardVariant {
+  // Stable variant id, e.g. "OP03-070", "OP03-070_p1", "OP03-070_aa".
+  variantId       String           @id @map("variant_id")
+  cardId          String           @map("card_id")
+  card            Card             @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  rarity          String?
+  isAltArt        Boolean          @default(false) @map("is_alt_art")
+  variantLabel    String?          @map("variant_label")
+  imageThumbUrl   String?          @map("image_thumb_url")
+  imageFullUrl    String?          @map("image_full_url")
+  // Precomputed perceptual hash (RGB-aware, DCT-based) of the art region.
+  // Format is documented in /shared/HASHING.md (Phase 3). Nullable until the
+  // ingest precompute step has run for this variant.
+  phash           String?
+  // Optional rotations/mirrors for robust matching.
+  phashVariants   String[]         @default([]) @map("phash_variants")
+  prices          Price[]
+  collectionItems CollectionItem[]
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@index([cardId])
+  @@map("card_variant")
+}
+
+// Append-only price history. "Current" price = latest row per
+// (variant, source, currency).
+model Price {
+  id          String      @id @default(cuid())
+  variantId   String      @map("variant_id")
+  variant     CardVariant @relation(fields: [variantId], references: [variantId], onDelete: Cascade)
+  source      String // 'tcgplayer' | 'cardmarket' | ...
+  currency    String // ISO-4217, e.g. 'USD', 'EUR'
+  marketPrice Decimal?    @map("market_price") @db.Decimal(12, 2)
+  lowPrice    Decimal?    @map("low_price") @db.Decimal(12, 2)
+  capturedAt  DateTime    @map("captured_at")
+
+  @@index([variantId, source, currency, capturedAt])
+  @@map("price")
+}
+
+// ---------------------------------------------------------------------------
+// User data
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String           @id @default(cuid())
+  email           String           @unique
+  passwordHash    String           @map("password_hash")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  collectionItems CollectionItem[]
+  refreshTokens   RefreshToken[]
+
+  @@map("user")
+}
+
+model CollectionItem {
+  id         String        @id @default(cuid())
+  userId     String        @map("user_id")
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variantId  String        @map("variant_id")
+  variant    CardVariant   @relation(fields: [variantId], references: [variantId], onDelete: Restrict)
+  quantity   Int           @default(1)
+  condition  CardCondition @default(NM)
+  isFoil     Boolean       @default(false) @map("is_foil")
+  notes      String?
+  // Idempotency key for offline sync (client-generated, globally unique).
+  clientUuid String        @unique @map("client_uuid")
+  addedAt    DateTime      @default(now()) @map("added_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  // Soft delete (tombstone) so deletes propagate during sync.
+  deletedAt  DateTime?     @map("deleted_at")
+
+  @@index([userId])
+  @@index([variantId])
+  @@index([userId, updatedAt])
+  @@map("collection_item")
+}
+
+// Standard refresh-token rotation table.
+model RefreshToken {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  replacedBy String?   @map("replaced_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_token")
+}

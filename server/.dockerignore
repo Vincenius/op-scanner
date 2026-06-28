@@ -1,0 +1,9 @@
+# Note: the actual build context is the repo root, so the root .dockerignore
+# governs the build. This file documents server-local excludes for clarity and
+# in case the image is ever built from this directory.
+node_modules
+dist
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
