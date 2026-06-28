@@ -17,15 +17,25 @@ final collectionSyncControllerProvider =
 );
 
 class CollectionSyncController extends Notifier<CollectionSyncState> {
+  bool _again = false;
+
   @override
   CollectionSyncState build() => const CollectionSyncState();
 
   Future<void> sync() async {
-    if (state.running) return;
     if (!ref.read(authControllerProvider).isAuthenticated) return;
+    // A mutation made while a flush is in flight re-arms the loop so it isn't
+    // lost until the next manual trigger.
+    if (state.running) {
+      _again = true;
+      return;
+    }
     state = const CollectionSyncState(running: true);
     try {
-      await ref.read(collectionSyncServiceProvider).flush();
+      do {
+        _again = false;
+        await ref.read(collectionSyncServiceProvider).flush();
+      } while (_again);
       state = const CollectionSyncState();
     } catch (err) {
       // Offline / transient — mutations stay queued for the next flush.

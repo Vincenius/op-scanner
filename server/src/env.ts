@@ -15,6 +15,8 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16),
   ACCESS_TOKEN_TTL: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  // Max requests per IP per minute.
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -1,5 +1,6 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { env } from './env.js';
@@ -27,6 +28,19 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(cors, {
     origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(','),
+  });
+
+  // Basic per-IP rate limiting (protects /auth and the public /share endpoint).
+  await app.register(rateLimit, { max: env.RATE_LIMIT_MAX, timeWindow: '1 minute' });
+
+  // Don't leak internals on unexpected errors; keep 4xx (validation) messages.
+  app.setErrorHandler((error: FastifyError, request, reply) => {
+    const status = error.statusCode ?? 500;
+    if (status >= 500) {
+      request.log.error(error);
+      return reply.code(500).send({ error: 'internal server error' });
+    }
+    return reply.code(status).send({ error: error.message });
   });
 
   await app.register(swagger, {

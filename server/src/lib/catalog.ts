@@ -1,6 +1,6 @@
-import type { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import type { CardDto, PriceDto } from '@op-scanner/shared';
-import { toCardDto, toPriceDto, type CardWithVariants } from './mappers.js';
+import { toCardDto, type CardWithVariants } from './mappers.js';
 
 export const DEFAULT_PRICE_SOURCE = 'tcgplayer';
 export const DEFAULT_PRICE_CURRENCY = 'USD';
@@ -11,7 +11,18 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
-/** Latest price per variant for the default source/currency. */
+interface LatestPriceRow {
+  variant_id: string;
+  market_price: number | null;
+  low_price: number | null;
+  captured_at: Date;
+}
+
+/**
+ * Latest price per variant for the default source/currency. Uses Postgres
+ * DISTINCT ON so only one row per variant is fetched (not the full history),
+ * which matters for large price tables and the public share endpoint.
+ */
 export async function currentPriceMap(
   prisma: PrismaClient,
   variantIds: string[],
@@ -20,12 +31,26 @@ export async function currentPriceMap(
 ): Promise<Map<string, PriceDto>> {
   const map = new Map<string, PriceDto>();
   for (const ids of chunk(variantIds, 1000)) {
-    const rows = await prisma.price.findMany({
-      where: { variantId: { in: ids }, source, currency },
-      orderBy: { capturedAt: 'desc' },
-    });
+    if (ids.length === 0) continue;
+    const rows = await prisma.$queryRaw<LatestPriceRow[]>`
+      SELECT DISTINCT ON (variant_id)
+        variant_id,
+        market_price::float8 AS market_price,
+        low_price::float8 AS low_price,
+        captured_at
+      FROM price
+      WHERE source = ${source} AND currency = ${currency}
+        AND variant_id IN (${Prisma.join(ids)})
+      ORDER BY variant_id, captured_at DESC
+    `;
     for (const row of rows) {
-      if (!map.has(row.variantId)) map.set(row.variantId, toPriceDto(row));
+      map.set(row.variant_id, {
+        source,
+        currency,
+        marketPrice: row.market_price,
+        lowPrice: row.low_price,
+        capturedAt: row.captured_at.toISOString(),
+      });
     }
   }
   return map;

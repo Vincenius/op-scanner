@@ -74,40 +74,51 @@ class CollectionSyncService {
       final stillQueuedTags = {for (final q in await _db.select(_db.tagSyncQueue).get()) q.clientUuid};
       final stillQueuedItems = {for (final q in await _db.select(_db.syncQueue).get()) q.clientUuid};
 
+      // Apply each authoritative row defensively — a single malformed item must
+      // not roll back the whole transaction (which would also undo the queue
+      // cleanup above and re-send the same batch forever).
       for (final t in respTags) {
-        final cu = t['clientUuid'] as String;
-        if (stillQueuedTags.contains(cu)) continue;
-        final updatedAt = DateTime.parse(t['updatedAt'] as String);
-        await _db.into(_db.tags).insertOnConflictUpdate(TagRow(
-          clientUuid: cu,
-          name: t['name'] as String,
-          color: t['color'] as String?,
-          createdAt: updatedAt,
-          updatedAt: updatedAt,
-          deletedAt: t['deletedAt'] != null ? DateTime.parse(t['deletedAt'] as String) : null,
-        ));
+        try {
+          final cu = t['clientUuid'] as String;
+          if (stillQueuedTags.contains(cu)) continue;
+          final updatedAt = DateTime.parse(t['updatedAt'] as String);
+          await _db.into(_db.tags).insertOnConflictUpdate(TagRow(
+            clientUuid: cu,
+            name: t['name'] as String? ?? '',
+            color: t['color'] as String?,
+            createdAt: updatedAt,
+            updatedAt: updatedAt,
+            deletedAt: t['deletedAt'] != null ? DateTime.parse(t['deletedAt'] as String) : null,
+          ));
+        } catch (_) {
+          // skip a malformed tag row
+        }
       }
 
       for (final i in respItems) {
-        final cu = i['clientUuid'] as String;
-        if (stillQueuedItems.contains(cu)) continue;
-        await _db.into(_db.collectionItems).insertOnConflictUpdate(CollectionItemRow(
-          clientUuid: cu,
-          variantId: i['variantId'] as String,
-          quantity: i['quantity'] as int,
-          condition: i['condition'] as String,
-          isFoil: i['isFoil'] as bool,
-          notes: i['notes'] as String?,
-          addedAt: DateTime.parse(i['addedAt'] as String),
-          updatedAt: DateTime.parse(i['updatedAt'] as String),
-          deletedAt: i['deletedAt'] != null ? DateTime.parse(i['deletedAt'] as String) : null,
-        ));
-        // Replace local links with the server's authoritative set.
-        await (_db.delete(_db.collectionItemTags)..where((t) => t.itemClientUuid.equals(cu))).go();
-        for (final tu in (i['tagClientUuids'] as List).cast<String>()) {
-          await _db.into(_db.collectionItemTags).insertOnConflictUpdate(
-                CollectionItemTagRow(itemClientUuid: cu, tagClientUuid: tu),
-              );
+        try {
+          final cu = i['clientUuid'] as String;
+          if (stillQueuedItems.contains(cu)) continue;
+          await _db.into(_db.collectionItems).insertOnConflictUpdate(CollectionItemRow(
+            clientUuid: cu,
+            variantId: i['variantId'] as String,
+            quantity: (i['quantity'] as num).toInt(),
+            condition: i['condition'] as String? ?? 'NM',
+            isFoil: i['isFoil'] as bool? ?? false,
+            notes: i['notes'] as String?,
+            addedAt: DateTime.parse(i['addedAt'] as String),
+            updatedAt: DateTime.parse(i['updatedAt'] as String),
+            deletedAt: i['deletedAt'] != null ? DateTime.parse(i['deletedAt'] as String) : null,
+          ));
+          // Replace local links with the server's authoritative set.
+          await (_db.delete(_db.collectionItemTags)..where((t) => t.itemClientUuid.equals(cu))).go();
+          for (final tu in (i['tagClientUuids'] as List?)?.cast<String>() ?? const <String>[]) {
+            await _db.into(_db.collectionItemTags).insertOnConflictUpdate(
+                  CollectionItemTagRow(itemClientUuid: cu, tagClientUuid: tu),
+                );
+          }
+        } catch (_) {
+          // skip a malformed item row
         }
       }
 

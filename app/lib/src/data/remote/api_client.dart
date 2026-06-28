@@ -5,6 +5,8 @@ import '../auth/auth_storage.dart';
 
 const _authPaths = {'/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'};
 
+enum _RefreshResult { ok, authFailed, networkError }
+
 /// HTTP client for the OP Scanner API. Injects the bearer access token and
 /// transparently refreshes it once on a 401 (rotating refresh token).
 class ApiClient {
@@ -19,7 +21,7 @@ class ApiClient {
   final AuthStorage _storage;
   final Dio _dio;
   final Dio _bareDio; // no interceptors — used for token refresh
-  Future<bool>? _refreshing;
+  Future<_RefreshResult>? _refreshing;
 
   /// Called when the session can no longer be refreshed (forces logout).
   void Function()? onUnauthenticated;
@@ -47,8 +49,8 @@ class ApiClient {
     final req = e.requestOptions;
     final is401 = e.response?.statusCode == 401;
     if (is401 && !_isAuthPath(req.path) && req.extra['retried'] != true) {
-      final ok = await _refreshOnce();
-      if (ok) {
+      final result = await _refreshOnce();
+      if (result == _RefreshResult.ok) {
         final token = await _storage.accessToken();
         req.extra['retried'] = true;
         req.headers['Authorization'] = 'Bearer $token';
@@ -58,16 +60,18 @@ class ApiClient {
           return handler.reject(err is DioException ? err : e);
         }
       }
-      onUnauthenticated?.call();
+      // Only force logout when the refresh token is genuinely rejected — never
+      // on a transient network error (which must not wipe the local session).
+      if (result == _RefreshResult.authFailed) onUnauthenticated?.call();
     }
     handler.next(e);
   }
 
-  Future<bool> _refreshOnce() {
+  Future<_RefreshResult> _refreshOnce() {
     return _refreshing ??= () async {
       try {
         final rt = await _storage.refreshToken();
-        if (rt == null) return false;
+        if (rt == null) return _RefreshResult.authFailed;
         final res = await _bareDio.post<Map<String, dynamic>>(
           '/auth/refresh',
           data: {'refreshToken': rt},
@@ -77,9 +81,14 @@ class ApiClient {
           accessToken: data['accessToken'] as String,
           refreshToken: data['refreshToken'] as String,
         ));
-        return true;
+        return _RefreshResult.ok;
+      } on DioException catch (err) {
+        final status = err.response?.statusCode;
+        return (status == 401 || status == 403)
+            ? _RefreshResult.authFailed
+            : _RefreshResult.networkError;
       } catch (_) {
-        return false;
+        return _RefreshResult.networkError;
       } finally {
         _refreshing = null;
       }

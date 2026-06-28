@@ -38,7 +38,12 @@ export interface RotatedRefresh extends IssuedRefresh {
   userId: string;
 }
 
-/** Validate + rotate a presented refresh token. Returns null if invalid. */
+/**
+ * Validate + rotate a presented refresh token. Returns null if invalid.
+ * - Detects reuse: presenting an already-rotated token revokes the whole family
+ *   (likely theft), so a stolen token can't run a parallel session.
+ * - Rotation is atomic and guards against two concurrent refreshes both minting.
+ */
 export async function rotateRefreshToken(
   prisma: PrismaClient,
   presented: string,
@@ -46,18 +51,42 @@ export async function rotateRefreshToken(
   const existing = await prisma.refreshToken.findUnique({
     where: { tokenHash: hashToken(presented) },
   });
-  if (!existing || existing.revokedAt || existing.expiresAt < new Date()) {
+  if (!existing) return null;
+
+  if (existing.revokedAt) {
+    // Reuse of a token that was already rotated -> revoke every active token for
+    // this user (breach response).
+    if (existing.replacedBy) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: existing.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
     return null;
   }
+  if (existing.expiresAt < new Date()) return null;
+
   const token = randomBytes(32).toString('hex');
   const expiresAt = refreshExpiry();
-  const created = await prisma.refreshToken.create({
-    data: { userId: existing.userId, tokenHash: hashToken(token), expiresAt },
-  });
-  await prisma.refreshToken.update({
-    where: { id: existing.id },
-    data: { revokedAt: new Date(), replacedBy: created.id },
-  });
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Revoke the old token only if still active — fails the concurrent racer.
+      const revoked = await tx.refreshToken.updateMany({
+        where: { id: existing.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      if (revoked.count === 0) throw new Error('already rotated');
+      const created = await tx.refreshToken.create({
+        data: { userId: existing.userId, tokenHash: hashToken(token), expiresAt },
+      });
+      await tx.refreshToken.update({
+        where: { id: existing.id },
+        data: { replacedBy: created.id },
+      });
+    });
+  } catch {
+    return null; // lost a concurrent rotation race
+  }
   return { userId: existing.userId, token, expiresAt };
 }
 

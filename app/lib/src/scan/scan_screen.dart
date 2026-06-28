@@ -42,7 +42,7 @@ class ScanScreen extends ConsumerStatefulWidget {
   ConsumerState<ScanScreen> createState() => _ScanScreenState();
 }
 
-class _ScanScreenState extends ConsumerState<ScanScreen> {
+class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObserver {
   CameraController? _camera;
   final TextRecognizer _recognizer = TextRecognizer(script: TextRecognitionScript.latin);
   Map<String, String> _db = const {};
@@ -60,7 +60,31 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _start();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Release the camera when backgrounded (the OS may reclaim it) and re-init
+    // on resume, so the loop doesn't spin on a dead/invalid controller.
+    if (state == AppLifecycleState.resumed) {
+      if (_camera == null) _resumeCamera();
+    } else {
+      _scanning = false;
+      final c = _camera;
+      _camera = null;
+      if (mounted) setState(() {});
+      c?.dispose();
+    }
+  }
+
+  Future<void> _resumeCamera() async {
+    await _initCamera();
+    if (_camera != null && _db.isNotEmpty) {
+      _scanning = true;
+      _loop();
+    }
   }
 
   Future<void> _start() async {
@@ -96,6 +120,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   @override
   void dispose() {
     _scanning = false;
+    WidgetsBinding.instance.removeObserver(this);
     _camera?.dispose();
     _recognizer.close();
     super.dispose();

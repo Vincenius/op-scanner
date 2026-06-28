@@ -127,7 +127,9 @@ class SyncService {
         final i = next++;
         if (i >= urls.length) break;
         try {
-          await _cache.downloadFile(urls[i]);
+          // getSingleFile returns the cached file if still valid (downloadFile
+          // would always re-fetch), so re-syncs don't re-download every thumbnail.
+          await _cache.getSingleFile(urls[i]);
         } catch (err) {
           if (kDebugMode) debugPrint('thumb prefetch failed: ${urls[i]} ($err)');
         }

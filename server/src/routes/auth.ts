@@ -39,6 +39,8 @@ function ttlSeconds(ttl: string): number {
 
 export default async function authRoutes(app: FastifyInstance): Promise<void> {
   const accessTtl = ttlSeconds(env.ACCESS_TOKEN_TTL);
+  // Used to equalize login timing when the email doesn't exist (no user-enumeration oracle).
+  const dummyHash = await hashPassword('not-a-real-password');
 
   const authResponse = (
     userId: string,
@@ -75,8 +77,12 @@ export default async function authRoutes(app: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const email = request.body.email.trim().toLowerCase();
       const user = await app.prisma.user.findUnique({ where: { email } });
-      const ok = user && (await verifyPassword(user.passwordHash, request.body.password));
-      if (!user || !ok) {
+      if (!user) {
+        await verifyPassword(dummyHash, request.body.password); // equalize timing
+        return reply.code(401).send({ error: 'invalid credentials' });
+      }
+      const ok = await verifyPassword(user.passwordHash, request.body.password);
+      if (!ok) {
         return reply.code(401).send({ error: 'invalid credentials' });
       }
       const refresh = await issueRefreshToken(app.prisma, user.id);

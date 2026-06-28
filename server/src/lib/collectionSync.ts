@@ -108,13 +108,16 @@ async function setItemTags(
     await prisma.collectionItemTag.deleteMany({ where: { collectionItemId } });
     return;
   }
-  await prisma.collectionItemTag.deleteMany({
-    where: { collectionItemId, tagId: { notIn: tagIds } },
-  });
-  await prisma.collectionItemTag.createMany({
-    data: tagIds.map((tagId) => ({ collectionItemId, tagId })),
-    skipDuplicates: true,
-  });
+  // Atomic replace so a concurrent sync can't observe a half-applied tag set.
+  await prisma.$transaction([
+    prisma.collectionItemTag.deleteMany({
+      where: { collectionItemId, tagId: { notIn: tagIds } },
+    }),
+    prisma.collectionItemTag.createMany({
+      data: tagIds.map((tagId) => ({ collectionItemId, tagId })),
+      skipDuplicates: true,
+    }),
+  ]);
 }
 
 /**

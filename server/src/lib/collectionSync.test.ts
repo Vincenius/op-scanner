@@ -11,6 +11,8 @@ function fakePrisma(knownVariants: string[]) {
   const known = new Set(knownVariants);
 
   const prisma = {
+    // Ops are eagerly-executed in this fake, so the array form just awaits them.
+    $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops),
     collectionItem: {
       findUnique: async ({ where }: { where: { clientUuid: string } }) => items.get(where.clientUuid) ?? null,
       update: async ({ where, data }: { where: { clientUuid: string }; data: Record<string, unknown> }) => {

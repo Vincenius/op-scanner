@@ -3,6 +3,10 @@ import 'phash.dart';
 /// Match thresholds — see /shared/HASHING.md. Tunable via the eval harness.
 const int kAcceptThreshold = 40;
 const int kAcceptMargin = 12;
+// With a single candidate (e.g. OCR restricted to a one-printing code) there is
+// no runner-up to compare, so require a tighter distance to avoid accepting an
+// OCR-misread code's lone variant.
+const int kSingleCandidateThreshold = 28;
 
 class MatchCandidate {
   const MatchCandidate(this.variantId, this.distance);
@@ -35,9 +39,15 @@ MatchResult matchHash(
   }
   ranked.sort((a, b) => a.distance.compareTo(b.distance));
 
-  final accepted = ranked.isNotEmpty &&
-      ranked.first.distance <= kAcceptThreshold &&
-      (ranked.length < 2 || ranked[1].distance - ranked.first.distance >= kAcceptMargin);
+  final bool accepted;
+  if (ranked.isEmpty) {
+    accepted = false;
+  } else if (ranked.length < 2) {
+    accepted = ranked.first.distance <= kSingleCandidateThreshold;
+  } else {
+    accepted = ranked.first.distance <= kAcceptThreshold &&
+        ranked[1].distance - ranked.first.distance >= kAcceptMargin;
+  }
 
   return MatchResult(ranked, accepted);
 }
