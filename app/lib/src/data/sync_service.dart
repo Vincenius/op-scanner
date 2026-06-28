@@ -103,6 +103,7 @@ class SyncService {
               lowPrice: Value((price?['lowPrice'] as num?)?.toDouble()),
               priceCurrency: Value(price?['currency'] as String?),
               priceCapturedAt: Value(_parseDate(price?['capturedAt'])),
+              phash: Value(v['phash'] as String?),
             ),
             mode: InsertMode.insertOrReplace,
           );
