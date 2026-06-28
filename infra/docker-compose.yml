@@ -59,17 +59,36 @@ services:
     ports:
       - "${API_PORT:-3000}:3000"
 
-  # Card-data ingestion job — added in Phase 1 (runs the CardSource pipeline).
-  # ingest:
-  #   build:
-  #     context: ..
-  #     dockerfile: ingest/Dockerfile
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   environment:
-  #     DATABASE_URL: ${DATABASE_URL}
-  #     APITCG_API_KEY: ${APITCG_API_KEY}
+  # Card-data ingestion — a ONE-OFF job (runs the CardSource pipeline, then
+  # exits), so it sits behind the "ingest" profile and never starts on a plain
+  # `docker compose up`. Run it on demand (it joins the same network, so it
+  # reaches the bundled DB at host "postgres"):
+  #   docker compose build ingest
+  #   docker compose run --rm ingest          # live: apitcg metadata/images + optcgapi prices
+  #   docker compose run --rm ingest fixture   # offline sample data (no network/keys)
+  #   docker compose run --rm ingest phash     # precompute recognition hashes
+  ingest:
+    build:
+      context: ..
+      dockerfile: ingest/Dockerfile
+    profiles: ["ingest"]
+    restart: "no"
+    # Start the bundled Postgres if it isn't already up; required: false keeps
+    # this working against an external DB (set DATABASE_URL accordingly).
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+    # Lets DATABASE_URL reach a Postgres on the Docker HOST via host.docker.internal.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      APITCG_API_KEY: ${APITCG_API_KEY}
+      # Optional tuning for the `phash` profile (see ingest/src/index.ts).
+      PHASH_LIMIT: ${PHASH_LIMIT:-}
+      PHASH_FORCE: ${PHASH_FORCE:-}
 
 volumes:
   pgdata:
