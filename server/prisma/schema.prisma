@@ -131,9 +131,41 @@ model User {
   passwordHash    String           @map("password_hash")
   createdAt       DateTime         @default(now()) @map("created_at")
   collectionItems CollectionItem[]
+  tags            Tag[]
   refreshTokens   RefreshToken[]
 
   @@map("user")
+}
+
+// User-defined label ("deck box", "trade binder", ...). Synced like collection
+// items (LWW by client updatedAt, soft-delete tombstones, idempotent by clientUuid).
+model Tag {
+  id         String              @id @default(cuid())
+  userId     String              @map("user_id")
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientUuid String              @unique @map("client_uuid")
+  name       String
+  color      String?
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @map("updated_at")
+  deletedAt  DateTime?           @map("deleted_at")
+  items      CollectionItemTag[]
+
+  @@index([userId])
+  @@map("tag")
+}
+
+// Which tags are on a collection entry. Assignment is part of the entry's state
+// (replaced wholesale on item sync), so the entry's updatedAt governs LWW.
+model CollectionItemTag {
+  collectionItemId String         @map("collection_item_id")
+  tagId            String         @map("tag_id")
+  collectionItem   CollectionItem @relation(fields: [collectionItemId], references: [id], onDelete: Cascade)
+  tag              Tag            @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([collectionItemId, tagId])
+  @@index([tagId])
+  @@map("collection_item_tag")
 }
 
 model CollectionItem {
@@ -146,6 +178,7 @@ model CollectionItem {
   condition  CardCondition @default(NM)
   isFoil     Boolean       @default(false) @map("is_foil")
   notes      String?
+  tags       CollectionItemTag[]
   // Idempotency key for offline sync (client-generated, globally unique).
   clientUuid String        @unique @map("client_uuid")
   addedAt    DateTime      @default(now()) @map("added_at")

@@ -1,5 +1,9 @@
 import type { PrismaClient } from '@prisma/client';
-import type { CollectionItemDto, CollectionMutation } from '@op-scanner/shared';
+import type {
+  CollectionItemDto,
+  CollectionMutation,
+  TagMutation,
+} from '@op-scanner/shared';
 
 export interface ApplyResult {
   applied: number;
@@ -7,17 +11,20 @@ export interface ApplyResult {
   rejected: string[]; // clientUuids that couldn't be applied (bad data / not owned / unknown variant)
 }
 
-export function toCollectionItemDto(item: {
-  clientUuid: string;
-  variantId: string;
-  quantity: number;
-  condition: string;
-  isFoil: boolean;
-  notes: string | null;
-  updatedAt: Date;
-  deletedAt: Date | null;
-  addedAt: Date;
-}): CollectionItemDto {
+export function toCollectionItemDto(
+  item: {
+    clientUuid: string;
+    variantId: string;
+    quantity: number;
+    condition: string;
+    isFoil: boolean;
+    notes: string | null;
+    updatedAt: Date;
+    deletedAt: Date | null;
+    addedAt: Date;
+  },
+  tagClientUuids: string[],
+): CollectionItemDto {
   return {
     clientUuid: item.clientUuid,
     variantId: item.variantId,
@@ -25,18 +32,98 @@ export function toCollectionItemDto(item: {
     condition: item.condition as CollectionItemDto['condition'],
     isFoil: item.isFoil,
     notes: item.notes,
+    tagClientUuids,
     updatedAt: item.updatedAt.toISOString(),
     deletedAt: item.deletedAt ? item.deletedAt.toISOString() : null,
     addedAt: item.addedAt.toISOString(),
   };
 }
 
+/** Apply tag entities with last-write-wins by `updatedAt` (idempotent, soft-delete). */
+export async function applyTags(
+  prisma: PrismaClient,
+  userId: string,
+  tags: TagMutation[],
+): Promise<ApplyResult> {
+  let applied = 0;
+  let skipped = 0;
+  const rejected: string[] = [];
+
+  for (const t of tags) {
+    const updatedAt = new Date(t.updatedAt);
+    if (Number.isNaN(updatedAt.getTime()) || !t.clientUuid || !t.name) {
+      rejected.push(t.clientUuid);
+      continue;
+    }
+    const existing = await prisma.tag.findUnique({ where: { clientUuid: t.clientUuid } });
+    if (existing) {
+      if (existing.userId !== userId) {
+        rejected.push(t.clientUuid);
+        continue;
+      }
+      if (existing.updatedAt >= updatedAt) {
+        skipped++;
+        continue;
+      }
+      await prisma.tag.update({
+        where: { clientUuid: t.clientUuid },
+        data: { name: t.name, color: t.color, updatedAt, deletedAt: t.deleted ? updatedAt : null },
+      });
+      applied++;
+    } else {
+      await prisma.tag.create({
+        data: {
+          userId,
+          clientUuid: t.clientUuid,
+          name: t.name,
+          color: t.color,
+          createdAt: updatedAt,
+          updatedAt,
+          deletedAt: t.deleted ? updatedAt : null,
+        },
+      });
+      applied++;
+    }
+  }
+  return { applied, skipped, rejected };
+}
+
+/** Set a collection entry's tag links to exactly `tagClientUuids` (owned by user). */
+async function setItemTags(
+  prisma: PrismaClient,
+  userId: string,
+  collectionItemId: string,
+  tagClientUuids: string[],
+): Promise<void> {
+  const tagIds = tagClientUuids.length
+    ? (
+        await prisma.tag.findMany({
+          where: { userId, clientUuid: { in: tagClientUuids } },
+          select: { id: true },
+        })
+      ).map((t) => t.id)
+    : [];
+
+  if (tagIds.length === 0) {
+    await prisma.collectionItemTag.deleteMany({ where: { collectionItemId } });
+    return;
+  }
+  await prisma.collectionItemTag.deleteMany({
+    where: { collectionItemId, tagId: { notIn: tagIds } },
+  });
+  await prisma.collectionItemTag.createMany({
+    data: tagIds.map((tagId) => ({ collectionItemId, tagId })),
+    skipDuplicates: true,
+  });
+}
+
 /**
  * Apply a batch of client mutations with last-write-wins by `updatedAt`.
- * - Idempotent: replaying the same batch is a no-op (server copy has equal
- *   updatedAt -> skipped).
+ * - Idempotent: replaying the same batch is a no-op.
  * - Honors soft deletes (tombstones via deletedAt).
+ * - Replaces each entry's tag links with the mutation's tagClientUuids.
  * - Ignores items owned by another user or referencing an unknown variant.
+ * NOTE: call applyTags() first so referenced tags exist.
  */
 export async function applyMutations(
   prisma: PrismaClient,
@@ -60,11 +147,11 @@ export async function applyMutations(
 
     if (existing) {
       if (existing.userId !== userId) {
-        rejected.push(m.clientUuid); // not your item
+        rejected.push(m.clientUuid);
         continue;
       }
       if (existing.updatedAt >= updatedAt) {
-        skipped++; // server copy is newer or identical (LWW / idempotent replay)
+        skipped++;
         continue;
       }
       await prisma.collectionItem.update({
@@ -79,11 +166,11 @@ export async function applyMutations(
           deletedAt: m.deleted ? updatedAt : null,
         },
       });
+      await setItemTags(prisma, userId, existing.id, m.tagClientUuids ?? []);
       applied++;
       continue;
     }
 
-    // New item — ensure the variant exists (FK safety).
     const variant = await prisma.cardVariant.findUnique({
       where: { variantId: m.variantId },
       select: { variantId: true },
@@ -92,7 +179,7 @@ export async function applyMutations(
       rejected.push(m.clientUuid);
       continue;
     }
-    await prisma.collectionItem.create({
+    const created = await prisma.collectionItem.create({
       data: {
         userId,
         clientUuid: m.clientUuid,
@@ -106,6 +193,7 @@ export async function applyMutations(
         deletedAt: m.deleted ? updatedAt : null,
       },
     });
+    await setItemTags(prisma, userId, created.id, m.tagClientUuids ?? []);
     applied++;
   }
 

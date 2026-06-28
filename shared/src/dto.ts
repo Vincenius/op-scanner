@@ -84,6 +84,24 @@ export interface AuthResponse {
   user: UserDto;
 }
 
+// --- Tags ---
+
+export interface TagDto {
+  clientUuid: string;
+  name: string;
+  color: string | null;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface TagMutation {
+  clientUuid: string;
+  name: string;
+  color: string | null;
+  updatedAt: string;
+  deleted: boolean;
+}
+
 // --- Collection ---
 
 /** A single offline mutation sent to POST /collection/sync. */
@@ -94,6 +112,8 @@ export interface CollectionMutation {
   condition: CardCondition;
   isFoil: boolean;
   notes: string | null;
+  /** Tags assigned to this entry (by tag clientUuid). Replaces the entry's set. */
+  tagClientUuids: string[];
   updatedAt: string; // client logical timestamp (ISO) — LWW basis
   deleted: boolean;
 }
@@ -106,19 +126,22 @@ export interface CollectionItemDto {
   condition: CardCondition;
   isFoil: boolean;
   notes: string | null;
+  tagClientUuids: string[];
   updatedAt: string;
   deletedAt: string | null;
   addedAt: string;
 }
 
 export interface CollectionSyncRequest {
-  /** Pull authoritative items changed since this time (omit for all). */
+  /** Pull authoritative items/tags changed since this time (omit for all). */
   since?: string;
+  tags?: TagMutation[];
   mutations: CollectionMutation[];
 }
 
 export interface CollectionSyncResponse {
   serverTime: string;
+  tags: TagDto[];
   items: CollectionItemDto[];
 }
 
@@ -127,4 +150,5 @@ export interface CollectionEntryDto extends CollectionItemDto {
   card: { id: string; name: string; cardCode: string; setCode: string; colors: string[]; type: CardType };
   variant: { rarity: string | null; isAltArt: boolean; variantLabel: string | null; thumbUrl: string };
   currentPrice: PriceDto | null;
+  tags: { clientUuid: string; name: string; color: string | null }[];
 }
