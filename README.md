@@ -112,10 +112,18 @@ the entry's ⋯ menu, or during scanning so every scanned card is tagged). Filte
 the collection by tag, and a card's detail page shows which boxes it's in. Tags
 sync across devices like the collection.
 
-**Scanning (mobile):** tap the **Scan** button, frame a card, and capture — ML Kit
-reads the card code, the art is perceptually hashed and matched offline (alt-arts
-included), and the match is added to your collection (with the active scan tag).
-Rapid-add auto-adds confident matches. Hidden on web.
+**Scanning (mobile):** open **Scan** and point at a card — it captures
+**automatically** (no tap). Each frame is de-skewed (OpenCV: Canny → contours →
+largest card quad → perspective warp), ML Kit reads the card code, and the art is
+perceptually hashed + matched offline (alt-arts included). Confident, stable
+matches are added to your collection with the active scan tag; per-card debounce
+avoids duplicates. Toggle **Auto-add** off to confirm each card with a tap.
+Hidden on web.
+
+> Running the OpenCV rectifier test locally needs the dartcv native lib: download
+> `libdartcv-linux-x64.tar.gz` (dartcv release matching opencv_dart's
+> `dartcv_version`) and run with `DARTCV_LIB_PATH=/path/to/libdartcv.so`. A device
+> build links it automatically; a plain `flutter test` just skips that test.
 
 ## Environment & secrets
 
@@ -145,10 +153,10 @@ npm run ingest        # run the ingestion job (stub until Phase 1)
 - **Phase 2 — Accounts + collection + sync** ✅ email/password auth (JWT +
   rotating refresh), collection model + `POST /collection/sync` (LWW, soft
   deletes, idempotent), offline-first client sync engine + collection UI.
-- **Phase 3 — Scanning + tags** ◑ recognizer (RGB pHash precompute + on-device
-  match, per `/shared/HASHING.md`), eval harness, and tags done & validated; the
-  live camera scan flow is built (mobile feature-flag) pending on-device test.
-  Perspective de-skew (OpenCV warp) is the next scan refinement.
+- **Phase 3 — Scanning + tags** ◑ recognizer (RGB pHash + on-device match, per
+  `/shared/HASHING.md`), OpenCV perspective de-skew, continuous auto-capture, eval
+  harness, and tags — all built & validated (the OpenCV de-skew is validated on
+  real skewed cards). Live camera capture itself still needs on-device testing.
 - **Phase 4 — Polish** — price history, stats, settings.
 
 See the project plan for full detail on each phase and its checkpoint.
