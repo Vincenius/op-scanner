@@ -1,8 +1,12 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import sharp from 'sharp';
 import type { FastifyInstance } from 'fastify';
 import { env } from '../env.js';
+
+/** Thumbnails are resized to keep bulk-prefetch feasible (upstream art is ~185KB). */
+const THUMB_WIDTH = 280;
 
 /**
  * Thumbnail/full-art proxy. The client only ever references `/img/...`, so
@@ -60,7 +64,13 @@ export default async function imageRoutes(app: FastifyInstance): Promise<void> {
           request.log.warn({ upstream, status: res.status }, 'upstream image fetch failed');
           return reply.code(502).send({ error: 'upstream image error' });
         }
-        const buf = Buffer.from(await res.arrayBuffer());
+        const original = Buffer.from(await res.arrayBuffer());
+        // Resize thumbnails (webp) so prefetching the whole catalog is feasible;
+        // serve full art untouched.
+        const buf =
+          size === 'thumb'
+            ? await sharp(original).resize({ width: THUMB_WIDTH, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer()
+            : original;
         await writeFile(cachePath, buf);
         return reply
           .header('Cache-Control', 'public, max-age=604800')
