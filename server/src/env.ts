@@ -8,6 +8,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   // Comma-separated list of allowed origins, or "*" for any.
   CORS_ORIGIN: z.string().default('*'),
+  // On-disk cache for proxied card thumbnails/full art.
+  IMAGE_CACHE_DIR: z.string().default('.image-cache'),
 });
 
 export type Env = z.infer<typeof envSchema>;

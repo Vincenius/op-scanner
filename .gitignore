@@ -13,6 +13,10 @@ yarn-error.log*
 # --- Prisma ---
 # migrations ARE committed; nothing to ignore here yet
 
+# --- Proxied image cache (server) ---
+.image-cache/
+server/.image-cache/
+
 # --- Flutter / Dart ---
 app/.dart_tool/
 app/.flutter-plugins

@@ -19,3 +19,5 @@ export type CardCondition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
 /** Known pricing sources. Kept open (string) on the DB side so new
  *  marketplaces can be ingested without a migration. */
 export type PriceSource = 'tcgplayer' | 'cardmarket';
+
+export * from './dto.js';

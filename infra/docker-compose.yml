@@ -35,6 +35,9 @@ services:
       PORT: 3000
       DATABASE_URL: ${DATABASE_URL}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      IMAGE_CACHE_DIR: /data/images
+    volumes:
+      - imgcache:/data/images
     ports:
       - "${API_PORT:-3000}:3000"
 
@@ -52,3 +55,4 @@ services:
 
 volumes:
   pgdata:
+  imgcache:

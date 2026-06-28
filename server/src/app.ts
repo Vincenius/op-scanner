@@ -5,6 +5,8 @@ import swaggerUi from '@fastify/swagger-ui';
 import { env } from './env.js';
 import prismaPlugin from './plugins/prisma.js';
 import healthRoutes from './routes/health.js';
+import catalogRoutes from './routes/catalog.js';
+import imageRoutes from './routes/images.js';
 
 /**
  * Builds and configures the Fastify application (without starting it), so it
@@ -30,7 +32,11 @@ export async function buildApp(): Promise<FastifyInstance> {
         description: 'One Piece TCG collection manager API.',
         version: '0.0.0',
       },
-      tags: [{ name: 'system', description: 'Health & diagnostics' }],
+      tags: [
+        { name: 'system', description: 'Health & diagnostics' },
+        { name: 'catalog', description: 'Sets, cards, variants, prices, sync' },
+        { name: 'images', description: 'Proxied card images' },
+      ],
     },
   });
   await app.register(swaggerUi, { routePrefix: '/docs' });
@@ -39,6 +45,8 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // Routes
   await app.register(healthRoutes);
+  await app.register(catalogRoutes);
+  await app.register(imageRoutes);
 
   return app;
 }
