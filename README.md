@@ -4,10 +4,10 @@ Cross-platform manager for a personal **One Piece TCG** collection: fast offline
 camera scanning (mobile), offline-first collection management, cloud sync, web
 access, and market pricing.
 
-> **Status:** Phase 1 — catalog + ingestion (see [Build order](#build-order)).
-> You can ingest the real card data and browse/filter the full catalog (with
-> images and USD prices) on mobile and web. Accounts/collection sync and
-> scanning land in later phases.
+> **Status:** Phase 2 — accounts + collection sync (see [Build order](#build-order)).
+> Ingest the card data, browse/filter the catalog (images + USD prices), create
+> an account, and manage a collection that syncs across devices offline-first.
+> On-device scanning lands in Phase 3.
 
 ## Repo layout
 
@@ -91,6 +91,11 @@ proxied + cached through the API (`/img/...`), and thumbnails are bulk-prefetche
 on sync. Scanning is mobile-only and feature-flagged off on web (see
 `app/lib/src/core/platform.dart`).
 
+Use the **Collection** tab to sign in / create an account, then add cards (from a
+card's detail page) with a condition. Edits write to the local DB immediately and
+sync to the server in the background (offline-first, last-write-wins); the same
+account sees the collection on any device. Tokens are stored in secure storage.
+
 ## Environment & secrets
 
 - Secrets live only in `.env` files, which are **gitignored**. Templates:
@@ -116,7 +121,9 @@ npm run ingest        # run the ingestion job (stub until Phase 1)
 - **Phase 1 — Catalog + ingestion** ✅ pluggable `CardSource` (apitcg + optcgapi),
   catalog API + `/catalog/sync`, image proxy, offline drift mirror, browsable/
   searchable/filterable catalog with images + USD prices.
-- **Phase 2 — Accounts + collection + sync** — auth, offline-first sync engine.
+- **Phase 2 — Accounts + collection + sync** ✅ email/password auth (JWT +
+  rotating refresh), collection model + `POST /collection/sync` (LWW, soft
+  deletes, idempotent), offline-first client sync engine + collection UI.
 - **Phase 3 — Scanning** — camera → OpenCV rectify → ML Kit OCR → RGB pHash →
   local match; hashes precomputed in `/ingest` to `/shared/HASHING.md`.
 - **Phase 4 — Polish** — price history, stats, settings.
