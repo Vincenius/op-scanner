@@ -4,9 +4,10 @@ Cross-platform manager for a personal **One Piece TCG** collection: fast offline
 camera scanning (mobile), offline-first collection management, cloud sync, web
 access, and market pricing.
 
-> **Status:** Phase 0 — scaffold (see [Build order](#build-order)). The backend
-> runs and the Flutter app launches; catalog, accounts/sync, and scanning land
-> in later phases.
+> **Status:** Phase 1 — catalog + ingestion (see [Build order](#build-order)).
+> You can ingest the real card data and browse/filter the full catalog (with
+> images and USD prices) on mobile and web. Accounts/collection sync and
+> scanning land in later phases.
 
 ## Repo layout
 
@@ -58,16 +59,36 @@ npm run prisma:migrate                    # dev migrations
 npm run dev:server
 ```
 
-### 3. Flutter app
+### 3. Ingest the card data
+
+Populate the catalog (sets, cards, alt-art variants, TCGPlayer USD prices). Needs
+Postgres up and an apitcg.com API key in `ingest/.env` (`APITCG_API_KEY`).
+
+```bash
+cp ingest/.env.example ingest/.env      # set APITCG_API_KEY + DATABASE_URL
+npm run ingest                          # live: apitcg metadata/images + optcgapi prices
+# or, offline sample data (no key/network):
+npm run -w @op-scanner/ingest ingest -- fixture
+```
+
+Metadata/images come from apitcg.com; prices from optcgapi.com. Each printing
+(base, parallel/alt-art, …) is stored as its own `card_variant`, and prices are
+keyed to the variant — so alt-arts get their own price.
+
+### 4. Flutter app
 
 ```bash
 cd app
 flutter pub get
-flutter run            # mobile device/emulator
-flutter run -d chrome  # web
+flutter run -d chrome   # web
+flutter run             # mobile device/emulator (Android emulator: pass
+                        # --dart-define=API_BASE_URL=http://10.0.2.2:3000)
 ```
 
-Scanning is mobile-only and is feature-flagged off on web (see
+Open the app and tap **Sync catalog** to mirror the catalog into the local
+(drift) DB; after that, browse/search/filter works offline. Card images are
+proxied + cached through the API (`/img/...`), and thumbnails are bulk-prefetched
+on sync. Scanning is mobile-only and feature-flagged off on web (see
 `app/lib/src/core/platform.dart`).
 
 ## Environment & secrets
@@ -92,8 +113,9 @@ npm run ingest        # run the ingestion job (stub until Phase 1)
 
 - **Phase 0 — Scaffold** ✅ monorepo, compose (postgres + api), Prisma schema,
   Fastify health check, Flutter skeleton.
-- **Phase 1 — Catalog + ingestion** — pluggable `CardSource`, catalog API +
-  `/catalog/sync`, browsable/filterable card list with prices.
+- **Phase 1 — Catalog + ingestion** ✅ pluggable `CardSource` (apitcg + optcgapi),
+  catalog API + `/catalog/sync`, image proxy, offline drift mirror, browsable/
+  searchable/filterable catalog with images + USD prices.
 - **Phase 2 — Accounts + collection + sync** — auth, offline-first sync engine.
 - **Phase 3 — Scanning** — camera → OpenCV rectify → ML Kit OCR → RGB pHash →
   local match; hashes precomputed in `/ingest` to `/shared/HASHING.md`.
