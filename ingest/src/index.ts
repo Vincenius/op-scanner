@@ -13,6 +13,7 @@ import { runIngest, type IngestConfig } from './pipeline/run.js';
 import { ApiTcgSource } from './sources/apitcg.js';
 import { OptcgApiSource } from './sources/optcgapi.js';
 import { FixtureSource } from './sources/fixture.js';
+import { precomputePhashes } from './phash/precompute.js';
 
 function buildConfig(profile: string): IngestConfig {
   switch (profile) {
@@ -41,6 +42,17 @@ function buildConfig(profile: string): IngestConfig {
 
 async function main(): Promise<void> {
   const profile = process.argv[2] ?? 'live';
+
+  // `ingest phash [setCode]` — precompute recognition hashes (see /shared/HASHING.md).
+  if (profile === 'phash') {
+    const setCode = process.argv[3];
+    const limit = process.env.PHASH_LIMIT ? Number(process.env.PHASH_LIMIT) : undefined;
+    const force = process.env.PHASH_FORCE === '1';
+    const r = await precomputePhashes({ setCode, limit, force });
+    console.log(`[phash] done ${r.done}, failed ${r.failed}, total ${r.total}`);
+    return;
+  }
+
   const config = buildConfig(profile);
   await runIngest(config);
 }

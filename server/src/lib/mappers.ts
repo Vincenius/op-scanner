@@ -51,6 +51,7 @@ export function toVariantDto(
     variantLabel: variant.variantLabel,
     thumbUrl: thumbPath(variant.variantId),
     fullUrl: fullPath(variant.variantId),
+    phash: variant.phash,
     currentPrice,
   };
 }

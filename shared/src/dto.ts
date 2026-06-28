@@ -29,6 +29,8 @@ export interface VariantDto {
   /** Stable proxy paths (relative to the API base); upstream URLs stay server-side. */
   thumbUrl: string; // e.g. /img/variants/OP01-016_p1/thumb
   fullUrl: string;
+  /** RGB perceptual hash for on-device recognition (48 hex), null until precomputed. */
+  phash: string | null;
   /** Latest price (per the default source/currency), if known. */
   currentPrice: PriceDto | null;
 }
