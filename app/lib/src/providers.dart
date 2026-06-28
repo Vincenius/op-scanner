@@ -66,6 +66,11 @@ final collectionStatsProvider =
   (ref) => ref.watch(collectionRepositoryProvider).watchStats(),
 );
 
+/// All collection entries, unfiltered — for the stats screen.
+final allCollectionEntriesProvider = StreamProvider<List<CollectionEntry>>(
+  (ref) => ref.watch(collectionRepositoryProvider).watch(const CollectionFilter()),
+);
+
 final catalogRepositoryProvider = Provider<CatalogRepository>(
   (ref) => CatalogRepository(ref.watch(databaseProvider)),
 );

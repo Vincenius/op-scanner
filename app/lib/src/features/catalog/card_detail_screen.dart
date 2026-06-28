@@ -7,6 +7,7 @@ import '../../data/local/database.dart';
 import '../../providers.dart';
 import '../../util/format.dart';
 import '../collection/add_to_collection_sheet.dart';
+import 'price_history_sheet.dart';
 import 'widgets/card_thumb.dart';
 
 /// Per-card detail: card stats + every printing (variant) with its price.
@@ -146,6 +147,13 @@ class _VariantRow extends ConsumerWidget {
             Text(
               formatUsd(variant.marketPrice),
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            IconButton(
+              tooltip: 'Price history',
+              icon: const Icon(Icons.show_chart),
+              visualDensity: VisualDensity.compact,
+              onPressed: () => PriceHistorySheet.show(context,
+                  variantId: variant.variantId, title: '$cardName · ${variant.variantId}'),
             ),
             IconButton(
               tooltip: authed ? 'Add to collection' : 'Sign in to add',

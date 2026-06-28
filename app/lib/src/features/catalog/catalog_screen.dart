@@ -46,6 +46,11 @@ class CatalogScreen extends ConsumerWidget {
             onPressed: sync.running ? null : ref.read(syncControllerProvider.notifier).sync,
             icon: const Icon(Icons.sync),
           ),
+          IconButton(
+            tooltip: 'Settings',
+            onPressed: () => context.go('/settings'),
+            icon: const Icon(Icons.settings_outlined),
+          ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(96),

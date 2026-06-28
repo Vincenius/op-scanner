@@ -94,6 +94,11 @@ class _CollectionView extends ConsumerWidget {
             ],
           ),
           IconButton(
+            tooltip: 'Stats',
+            onPressed: () => context.go('/collection/stats'),
+            icon: const Icon(Icons.insights_outlined),
+          ),
+          IconButton(
             tooltip: 'Sync',
             onPressed: sync.running ? null : ref.read(collectionSyncControllerProvider.notifier).sync,
             icon: const Icon(Icons.sync),
@@ -102,9 +107,11 @@ class _CollectionView extends ConsumerWidget {
             icon: const Icon(Icons.account_circle_outlined),
             onSelected: (v) {
               if (v == 'logout') ref.read(authControllerProvider.notifier).logout();
+              if (v == 'settings') context.go('/settings');
             },
             itemBuilder: (_) => [
               PopupMenuItem(enabled: false, child: Text(email)),
+              const PopupMenuItem(value: 'settings', child: Text('Settings')),
               const PopupMenuItem(value: 'logout', child: Text('Sign out')),
             ],
           ),

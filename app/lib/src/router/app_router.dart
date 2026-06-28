@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../features/auth/login_screen.dart';
 import '../features/catalog/card_detail_screen.dart';
+import '../features/collection/collection_stats_screen.dart';
+import '../features/settings/settings_screen.dart';
 import '../features/shell/home_shell.dart';
 import '../scan/scan_entry.dart';
 
@@ -32,6 +34,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/scan',
         name: 'scan',
         builder: (context, state) => const ScanScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/collection/stats',
+        name: 'collection-stats',
+        builder: (context, state) => const CollectionStatsScreen(),
       ),
     ],
   );
