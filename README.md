@@ -39,7 +39,7 @@ cd infra
 docker compose up --build
 ```
 
-- API → http://localhost:3000
+- API → http://localhost:3022  (host port is `API_PORT` in `infra/.env`)
   - `GET /health` — liveness
   - `GET /health/ready` — readiness (checks DB)
   - `/docs` — Swagger UI · `/docs/json` — OpenAPI spec
@@ -91,10 +91,13 @@ matching with the eval harness: `cd app && dart run tool/eval.dart <db.json> <im
 ```bash
 cd app
 flutter pub get
-flutter run -d chrome   # web
-flutter run             # mobile device/emulator (Android emulator: pass
-                        # --dart-define=API_BASE_URL=http://10.0.2.2:3000)
+flutter run -d chrome   # web (defaults to the API at http://localhost:3022)
+flutter run             # mobile device/emulator
 ```
+
+Client build-time options (`--dart-define`):
+- `API_BASE_URL` — API base (default `http://localhost:3022`; Android emulator: `http://10.0.2.2:3022`).
+- `WEB_BASE_URL` — base used to build public share links on mobile (on web the current origin is used).
 
 Open the app and tap **Sync catalog** to mirror the catalog into the local
 (drift) DB; after that, browse/search/filter works offline. Card images are

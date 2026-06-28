@@ -5,7 +5,7 @@ class AppConfig {
   /// For the Android emulator use http://10.0.2.2:3000.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: 'http://localhost:3022',
   );
 
   /// Base URL of the web app, used to build shareable links on mobile (on web
