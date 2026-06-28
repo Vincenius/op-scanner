@@ -4,10 +4,11 @@ Cross-platform manager for a personal **One Piece TCG** collection: fast offline
 camera scanning (mobile), offline-first collection management, cloud sync, web
 access, and market pricing.
 
-> **Status:** Phase 2 — accounts + collection sync (see [Build order](#build-order)).
-> Ingest the card data, browse/filter the catalog (images + USD prices), create
-> an account, and manage a collection that syncs across devices offline-first.
-> On-device scanning lands in Phase 3.
+> **Status:** Phase 3 — scanning + tags (see [Build order](#build-order)). Catalog
+> browse, accounts, offline-first collection sync, **tags ("deck boxes")**, and
+> the **on-device recognizer** (RGB pHash precompute + match) are done. The live
+> camera scan flow is built behind the mobile feature-flag and needs on-device
+> validation (camera/ML Kit can't run in CI).
 
 ## Repo layout
 
@@ -75,6 +76,16 @@ Metadata/images come from apitcg.com; prices from optcgapi.com. Each printing
 (base, parallel/alt-art, …) is stored as its own `card_variant`, and prices are
 keyed to the variant — so alt-arts get their own price.
 
+Precompute recognition hashes (per /shared/HASHING.md) for the scanner:
+
+```bash
+npm run -w @op-scanner/ingest ingest -- phash            # all variants
+npm run -w @op-scanner/ingest ingest -- phash OP01       # one set
+```
+
+These sync to the client (`/catalog/sync`) for fully offline matching. Tune/check
+matching with the eval harness: `cd app && dart run tool/eval.dart <db.json> <imagesDir>`.
+
 ### 4. Flutter app
 
 ```bash
@@ -95,6 +106,16 @@ Use the **Collection** tab to sign in / create an account, then add cards (from 
 card's detail page) with a condition. Edits write to the local DB immediately and
 sync to the server in the background (offline-first, last-write-wins); the same
 account sees the collection on any device. Tokens are stored in secure storage.
+
+**Tags ("deck boxes"):** create tags and assign them to collection entries (from
+the entry's ⋯ menu, or during scanning so every scanned card is tagged). Filter
+the collection by tag, and a card's detail page shows which boxes it's in. Tags
+sync across devices like the collection.
+
+**Scanning (mobile):** tap the **Scan** button, frame a card, and capture — ML Kit
+reads the card code, the art is perceptually hashed and matched offline (alt-arts
+included), and the match is added to your collection (with the active scan tag).
+Rapid-add auto-adds confident matches. Hidden on web.
 
 ## Environment & secrets
 
@@ -124,8 +145,10 @@ npm run ingest        # run the ingestion job (stub until Phase 1)
 - **Phase 2 — Accounts + collection + sync** ✅ email/password auth (JWT +
   rotating refresh), collection model + `POST /collection/sync` (LWW, soft
   deletes, idempotent), offline-first client sync engine + collection UI.
-- **Phase 3 — Scanning** — camera → OpenCV rectify → ML Kit OCR → RGB pHash →
-  local match; hashes precomputed in `/ingest` to `/shared/HASHING.md`.
+- **Phase 3 — Scanning + tags** ◑ recognizer (RGB pHash precompute + on-device
+  match, per `/shared/HASHING.md`), eval harness, and tags done & validated; the
+  live camera scan flow is built (mobile feature-flag) pending on-device test.
+  Perspective de-skew (OpenCV warp) is the next scan refinement.
 - **Phase 4 — Polish** — price history, stats, settings.
 
 See the project plan for full detail on each phase and its checkpoint.
