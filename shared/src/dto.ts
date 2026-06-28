@@ -3,7 +3,7 @@
  * mirrors these shapes (hand-authored Dart models for now; a later step can
  * generate them from the Fastify OpenAPI output).
  */
-import type { CardType } from './index.js';
+import type { CardCondition, CardType } from './index.js';
 
 export interface SetDto {
   id: string;
@@ -68,4 +68,63 @@ export interface PagedCards {
   total: number;
   totalPages: number;
   data: CardDto[];
+}
+
+// --- Auth ---
+
+export interface UserDto {
+  id: string;
+  email: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresIn: number; // seconds
+  user: UserDto;
+}
+
+// --- Collection ---
+
+/** A single offline mutation sent to POST /collection/sync. */
+export interface CollectionMutation {
+  clientUuid: string;
+  variantId: string;
+  quantity: number;
+  condition: CardCondition;
+  isFoil: boolean;
+  notes: string | null;
+  updatedAt: string; // client logical timestamp (ISO) — LWW basis
+  deleted: boolean;
+}
+
+/** Authoritative collection item (lean sync shape). */
+export interface CollectionItemDto {
+  clientUuid: string;
+  variantId: string;
+  quantity: number;
+  condition: CardCondition;
+  isFoil: boolean;
+  notes: string | null;
+  updatedAt: string;
+  deletedAt: string | null;
+  addedAt: string;
+}
+
+export interface CollectionSyncRequest {
+  /** Pull authoritative items changed since this time (omit for all). */
+  since?: string;
+  mutations: CollectionMutation[];
+}
+
+export interface CollectionSyncResponse {
+  serverTime: string;
+  items: CollectionItemDto[];
+}
+
+/** Rich collection entry for GET /collection (joined with catalog + price). */
+export interface CollectionEntryDto extends CollectionItemDto {
+  card: { id: string; name: string; cardCode: string; setCode: string; colors: string[]; type: CardType };
+  variant: { rarity: string | null; isAltArt: boolean; variantLabel: string | null; thumbUrl: string };
+  currentPrice: PriceDto | null;
 }

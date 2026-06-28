@@ -149,7 +149,9 @@ model CollectionItem {
   // Idempotency key for offline sync (client-generated, globally unique).
   clientUuid String        @unique @map("client_uuid")
   addedAt    DateTime      @default(now()) @map("added_at")
-  updatedAt  DateTime      @updatedAt @map("updated_at")
+  // Client-controlled logical version timestamp — the basis for last-write-wins.
+  // NOT @updatedAt (which Prisma would overwrite on every server write).
+  updatedAt  DateTime      @map("updated_at")
   // Soft delete (tombstone) so deletes propagate during sync.
   deletedAt  DateTime?     @map("deleted_at")
 

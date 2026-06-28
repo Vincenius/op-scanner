@@ -10,6 +10,11 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('*'),
   // On-disk cache for proxied card thumbnails/full art.
   IMAGE_CACHE_DIR: z.string().default('.image-cache'),
+  // Auth (Phase 2).
+  JWT_ACCESS_SECRET: z.string().min(16),
+  JWT_REFRESH_SECRET: z.string().min(16),
+  ACCESS_TOKEN_TTL: z.string().default('15m'),
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
 });
 
 export type Env = z.infer<typeof envSchema>;
