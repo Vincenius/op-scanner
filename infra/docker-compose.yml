@@ -4,6 +4,11 @@ name: op-scanner
 # Run from this directory:  docker compose up --build
 
 services:
+  # op-scanner's OWN Postgres (isolated from anything else on the host). The API
+  # reaches it over the internal compose network (host "postgres"), so it needs
+  # no published host port; the mapping below is localhost-only on POSTGRES_PORT
+  # (default 5433) purely for optional host-side access, and deliberately avoids
+  # 5432 which is commonly already taken.
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -12,7 +17,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -26,9 +31,17 @@ services:
       context: ..
       dockerfile: server/Dockerfile
     restart: unless-stopped
+    # The bundled "postgres" starts by default and the API waits for it to be
+    # healthy. required: false keeps the API working if you instead run it
+    # against an external DB via `docker compose up --no-deps api`.
     depends_on:
       postgres:
         condition: service_healthy
+        required: false
+    # Lets DATABASE_URL reach a Postgres running on the Docker HOST via
+    # host.docker.internal (only relevant for the external-DB path above).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0

@@ -36,6 +36,7 @@ app/ios/Flutter/Flutter.framework
 app/ios/Flutter/Flutter.podspec
 app/macos/Pods/
 *.iml
+.kotlin/
 
 # --- OS / editor ---
 .DS_Store
