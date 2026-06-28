@@ -63,6 +63,29 @@ class CollectionActions {
     _flush();
   }
 
+  /// Set the tags assigned to a collection entry.
+  Future<void> setItemTags(String itemClientUuid, List<String> tagClientUuids) async {
+    await _ref.read(collectionRepositoryProvider).setItemTags(itemClientUuid, tagClientUuids);
+    _flush();
+  }
+
+  // --- Tags ---
+  Future<String> createTag(String name, {String? color}) async {
+    final clientUuid = await _ref.read(tagRepositoryProvider).create(name, color: color);
+    _flush();
+    return clientUuid;
+  }
+
+  Future<void> renameTag(TagRow tag, String name) async {
+    await _ref.read(tagRepositoryProvider).rename(tag, name);
+    _flush();
+  }
+
+  Future<void> deleteTag(TagRow tag) async {
+    await _ref.read(tagRepositoryProvider).delete(tag);
+    _flush();
+  }
+
   void _flush() {
     // Fire-and-forget; failures keep the entry queued.
     Future.microtask(() => _ref.read(collectionSyncControllerProvider.notifier).sync());

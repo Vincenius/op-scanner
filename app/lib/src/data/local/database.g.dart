@@ -2905,6 +2905,875 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
   }
 }
 
+class $TagsTable extends Tags with TableInfo<$TagsTable, TagRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TagsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientUuidMeta = const VerificationMeta(
+    'clientUuid',
+  );
+  @override
+  late final GeneratedColumn<String> clientUuid = GeneratedColumn<String>(
+    'client_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    clientUuid,
+    name,
+    color,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tags';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TagRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_uuid')) {
+      context.handle(
+        _clientUuidMeta,
+        clientUuid.isAcceptableOrUnknown(data['client_uuid']!, _clientUuidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_clientUuidMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientUuid};
+  @override
+  TagRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TagRow(
+      clientUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_uuid'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $TagsTable createAlias(String alias) {
+    return $TagsTable(attachedDatabase, alias);
+  }
+}
+
+class TagRow extends DataClass implements Insertable<TagRow> {
+  final String clientUuid;
+  final String name;
+  final String? color;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  const TagRow({
+    required this.clientUuid,
+    required this.name,
+    this.color,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_uuid'] = Variable<String>(clientUuid);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || color != null) {
+      map['color'] = Variable<String>(color);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  TagsCompanion toCompanion(bool nullToAbsent) {
+    return TagsCompanion(
+      clientUuid: Value(clientUuid),
+      name: Value(name),
+      color: color == null && nullToAbsent
+          ? const Value.absent()
+          : Value(color),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory TagRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TagRow(
+      clientUuid: serializer.fromJson<String>(json['clientUuid']),
+      name: serializer.fromJson<String>(json['name']),
+      color: serializer.fromJson<String?>(json['color']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientUuid': serializer.toJson<String>(clientUuid),
+      'name': serializer.toJson<String>(name),
+      'color': serializer.toJson<String?>(color),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  TagRow copyWith({
+    String? clientUuid,
+    String? name,
+    Value<String?> color = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => TagRow(
+    clientUuid: clientUuid ?? this.clientUuid,
+    name: name ?? this.name,
+    color: color.present ? color.value : this.color,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  TagRow copyWithCompanion(TagsCompanion data) {
+    return TagRow(
+      clientUuid: data.clientUuid.present
+          ? data.clientUuid.value
+          : this.clientUuid,
+      name: data.name.present ? data.name.value : this.name,
+      color: data.color.present ? data.color.value : this.color,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TagRow(')
+          ..write('clientUuid: $clientUuid, ')
+          ..write('name: $name, ')
+          ..write('color: $color, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(clientUuid, name, color, createdAt, updatedAt, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TagRow &&
+          other.clientUuid == this.clientUuid &&
+          other.name == this.name &&
+          other.color == this.color &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class TagsCompanion extends UpdateCompanion<TagRow> {
+  final Value<String> clientUuid;
+  final Value<String> name;
+  final Value<String?> color;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const TagsCompanion({
+    this.clientUuid = const Value.absent(),
+    this.name = const Value.absent(),
+    this.color = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TagsCompanion.insert({
+    required String clientUuid,
+    required String name,
+    this.color = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : clientUuid = Value(clientUuid),
+       name = Value(name),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<TagRow> custom({
+    Expression<String>? clientUuid,
+    Expression<String>? name,
+    Expression<String>? color,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientUuid != null) 'client_uuid': clientUuid,
+      if (name != null) 'name': name,
+      if (color != null) 'color': color,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TagsCompanion copyWith({
+    Value<String>? clientUuid,
+    Value<String>? name,
+    Value<String?>? color,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return TagsCompanion(
+      clientUuid: clientUuid ?? this.clientUuid,
+      name: name ?? this.name,
+      color: color ?? this.color,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientUuid.present) {
+      map['client_uuid'] = Variable<String>(clientUuid.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TagsCompanion(')
+          ..write('clientUuid: $clientUuid, ')
+          ..write('name: $name, ')
+          ..write('color: $color, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CollectionItemTagsTable extends CollectionItemTags
+    with TableInfo<$CollectionItemTagsTable, CollectionItemTagRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CollectionItemTagsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _itemClientUuidMeta = const VerificationMeta(
+    'itemClientUuid',
+  );
+  @override
+  late final GeneratedColumn<String> itemClientUuid = GeneratedColumn<String>(
+    'item_client_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tagClientUuidMeta = const VerificationMeta(
+    'tagClientUuid',
+  );
+  @override
+  late final GeneratedColumn<String> tagClientUuid = GeneratedColumn<String>(
+    'tag_client_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [itemClientUuid, tagClientUuid];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'collection_item_tags';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CollectionItemTagRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('item_client_uuid')) {
+      context.handle(
+        _itemClientUuidMeta,
+        itemClientUuid.isAcceptableOrUnknown(
+          data['item_client_uuid']!,
+          _itemClientUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_itemClientUuidMeta);
+    }
+    if (data.containsKey('tag_client_uuid')) {
+      context.handle(
+        _tagClientUuidMeta,
+        tagClientUuid.isAcceptableOrUnknown(
+          data['tag_client_uuid']!,
+          _tagClientUuidMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_tagClientUuidMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {itemClientUuid, tagClientUuid};
+  @override
+  CollectionItemTagRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CollectionItemTagRow(
+      itemClientUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_client_uuid'],
+      )!,
+      tagClientUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tag_client_uuid'],
+      )!,
+    );
+  }
+
+  @override
+  $CollectionItemTagsTable createAlias(String alias) {
+    return $CollectionItemTagsTable(attachedDatabase, alias);
+  }
+}
+
+class CollectionItemTagRow extends DataClass
+    implements Insertable<CollectionItemTagRow> {
+  final String itemClientUuid;
+  final String tagClientUuid;
+  const CollectionItemTagRow({
+    required this.itemClientUuid,
+    required this.tagClientUuid,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['item_client_uuid'] = Variable<String>(itemClientUuid);
+    map['tag_client_uuid'] = Variable<String>(tagClientUuid);
+    return map;
+  }
+
+  CollectionItemTagsCompanion toCompanion(bool nullToAbsent) {
+    return CollectionItemTagsCompanion(
+      itemClientUuid: Value(itemClientUuid),
+      tagClientUuid: Value(tagClientUuid),
+    );
+  }
+
+  factory CollectionItemTagRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CollectionItemTagRow(
+      itemClientUuid: serializer.fromJson<String>(json['itemClientUuid']),
+      tagClientUuid: serializer.fromJson<String>(json['tagClientUuid']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'itemClientUuid': serializer.toJson<String>(itemClientUuid),
+      'tagClientUuid': serializer.toJson<String>(tagClientUuid),
+    };
+  }
+
+  CollectionItemTagRow copyWith({
+    String? itemClientUuid,
+    String? tagClientUuid,
+  }) => CollectionItemTagRow(
+    itemClientUuid: itemClientUuid ?? this.itemClientUuid,
+    tagClientUuid: tagClientUuid ?? this.tagClientUuid,
+  );
+  CollectionItemTagRow copyWithCompanion(CollectionItemTagsCompanion data) {
+    return CollectionItemTagRow(
+      itemClientUuid: data.itemClientUuid.present
+          ? data.itemClientUuid.value
+          : this.itemClientUuid,
+      tagClientUuid: data.tagClientUuid.present
+          ? data.tagClientUuid.value
+          : this.tagClientUuid,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CollectionItemTagRow(')
+          ..write('itemClientUuid: $itemClientUuid, ')
+          ..write('tagClientUuid: $tagClientUuid')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(itemClientUuid, tagClientUuid);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CollectionItemTagRow &&
+          other.itemClientUuid == this.itemClientUuid &&
+          other.tagClientUuid == this.tagClientUuid);
+}
+
+class CollectionItemTagsCompanion
+    extends UpdateCompanion<CollectionItemTagRow> {
+  final Value<String> itemClientUuid;
+  final Value<String> tagClientUuid;
+  final Value<int> rowid;
+  const CollectionItemTagsCompanion({
+    this.itemClientUuid = const Value.absent(),
+    this.tagClientUuid = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CollectionItemTagsCompanion.insert({
+    required String itemClientUuid,
+    required String tagClientUuid,
+    this.rowid = const Value.absent(),
+  }) : itemClientUuid = Value(itemClientUuid),
+       tagClientUuid = Value(tagClientUuid);
+  static Insertable<CollectionItemTagRow> custom({
+    Expression<String>? itemClientUuid,
+    Expression<String>? tagClientUuid,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (itemClientUuid != null) 'item_client_uuid': itemClientUuid,
+      if (tagClientUuid != null) 'tag_client_uuid': tagClientUuid,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CollectionItemTagsCompanion copyWith({
+    Value<String>? itemClientUuid,
+    Value<String>? tagClientUuid,
+    Value<int>? rowid,
+  }) {
+    return CollectionItemTagsCompanion(
+      itemClientUuid: itemClientUuid ?? this.itemClientUuid,
+      tagClientUuid: tagClientUuid ?? this.tagClientUuid,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (itemClientUuid.present) {
+      map['item_client_uuid'] = Variable<String>(itemClientUuid.value);
+    }
+    if (tagClientUuid.present) {
+      map['tag_client_uuid'] = Variable<String>(tagClientUuid.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CollectionItemTagsCompanion(')
+          ..write('itemClientUuid: $itemClientUuid, ')
+          ..write('tagClientUuid: $tagClientUuid, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TagSyncQueueTable extends TagSyncQueue
+    with TableInfo<$TagSyncQueueTable, TagSyncQueueRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TagSyncQueueTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientUuidMeta = const VerificationMeta(
+    'clientUuid',
+  );
+  @override
+  late final GeneratedColumn<String> clientUuid = GeneratedColumn<String>(
+    'client_uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _queuedAtMeta = const VerificationMeta(
+    'queuedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> queuedAt = GeneratedColumn<DateTime>(
+    'queued_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [clientUuid, queuedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tag_sync_queue';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TagSyncQueueRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_uuid')) {
+      context.handle(
+        _clientUuidMeta,
+        clientUuid.isAcceptableOrUnknown(data['client_uuid']!, _clientUuidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_clientUuidMeta);
+    }
+    if (data.containsKey('queued_at')) {
+      context.handle(
+        _queuedAtMeta,
+        queuedAt.isAcceptableOrUnknown(data['queued_at']!, _queuedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_queuedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientUuid};
+  @override
+  TagSyncQueueRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TagSyncQueueRow(
+      clientUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_uuid'],
+      )!,
+      queuedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}queued_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TagSyncQueueTable createAlias(String alias) {
+    return $TagSyncQueueTable(attachedDatabase, alias);
+  }
+}
+
+class TagSyncQueueRow extends DataClass implements Insertable<TagSyncQueueRow> {
+  final String clientUuid;
+  final DateTime queuedAt;
+  const TagSyncQueueRow({required this.clientUuid, required this.queuedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_uuid'] = Variable<String>(clientUuid);
+    map['queued_at'] = Variable<DateTime>(queuedAt);
+    return map;
+  }
+
+  TagSyncQueueCompanion toCompanion(bool nullToAbsent) {
+    return TagSyncQueueCompanion(
+      clientUuid: Value(clientUuid),
+      queuedAt: Value(queuedAt),
+    );
+  }
+
+  factory TagSyncQueueRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TagSyncQueueRow(
+      clientUuid: serializer.fromJson<String>(json['clientUuid']),
+      queuedAt: serializer.fromJson<DateTime>(json['queuedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientUuid': serializer.toJson<String>(clientUuid),
+      'queuedAt': serializer.toJson<DateTime>(queuedAt),
+    };
+  }
+
+  TagSyncQueueRow copyWith({String? clientUuid, DateTime? queuedAt}) =>
+      TagSyncQueueRow(
+        clientUuid: clientUuid ?? this.clientUuid,
+        queuedAt: queuedAt ?? this.queuedAt,
+      );
+  TagSyncQueueRow copyWithCompanion(TagSyncQueueCompanion data) {
+    return TagSyncQueueRow(
+      clientUuid: data.clientUuid.present
+          ? data.clientUuid.value
+          : this.clientUuid,
+      queuedAt: data.queuedAt.present ? data.queuedAt.value : this.queuedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TagSyncQueueRow(')
+          ..write('clientUuid: $clientUuid, ')
+          ..write('queuedAt: $queuedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(clientUuid, queuedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TagSyncQueueRow &&
+          other.clientUuid == this.clientUuid &&
+          other.queuedAt == this.queuedAt);
+}
+
+class TagSyncQueueCompanion extends UpdateCompanion<TagSyncQueueRow> {
+  final Value<String> clientUuid;
+  final Value<DateTime> queuedAt;
+  final Value<int> rowid;
+  const TagSyncQueueCompanion({
+    this.clientUuid = const Value.absent(),
+    this.queuedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TagSyncQueueCompanion.insert({
+    required String clientUuid,
+    required DateTime queuedAt,
+    this.rowid = const Value.absent(),
+  }) : clientUuid = Value(clientUuid),
+       queuedAt = Value(queuedAt);
+  static Insertable<TagSyncQueueRow> custom({
+    Expression<String>? clientUuid,
+    Expression<DateTime>? queuedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientUuid != null) 'client_uuid': clientUuid,
+      if (queuedAt != null) 'queued_at': queuedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TagSyncQueueCompanion copyWith({
+    Value<String>? clientUuid,
+    Value<DateTime>? queuedAt,
+    Value<int>? rowid,
+  }) {
+    return TagSyncQueueCompanion(
+      clientUuid: clientUuid ?? this.clientUuid,
+      queuedAt: queuedAt ?? this.queuedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientUuid.present) {
+      map['client_uuid'] = Variable<String>(clientUuid.value);
+    }
+    if (queuedAt.present) {
+      map['queued_at'] = Variable<DateTime>(queuedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TagSyncQueueCompanion(')
+          ..write('clientUuid: $clientUuid, ')
+          ..write('queuedAt: $queuedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2916,6 +3785,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
+  late final $TagsTable tags = $TagsTable(this);
+  late final $CollectionItemTagsTable collectionItemTags =
+      $CollectionItemTagsTable(this);
+  late final $TagSyncQueueTable tagSyncQueue = $TagSyncQueueTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2927,6 +3800,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     syncMeta,
     collectionItems,
     syncQueue,
+    tags,
+    collectionItemTags,
+    tagSyncQueue,
   ];
 }
 
@@ -4403,6 +5279,524 @@ typedef $$SyncQueueTableProcessedTableManager =
       SyncQueueRow,
       PrefetchHooks Function()
     >;
+typedef $$TagsTableCreateCompanionBuilder =
+    TagsCompanion Function({
+      required String clientUuid,
+      required String name,
+      Value<String?> color,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$TagsTableUpdateCompanionBuilder =
+    TagsCompanion Function({
+      Value<String> clientUuid,
+      Value<String> name,
+      Value<String?> color,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+
+class $$TagsTableFilterComposer extends Composer<_$AppDatabase, $TagsTable> {
+  $$TagsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TagsTableOrderingComposer extends Composer<_$AppDatabase, $TagsTable> {
+  $$TagsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TagsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TagsTable> {
+  $$TagsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$TagsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TagsTable,
+          TagRow,
+          $$TagsTableFilterComposer,
+          $$TagsTableOrderingComposer,
+          $$TagsTableAnnotationComposer,
+          $$TagsTableCreateCompanionBuilder,
+          $$TagsTableUpdateCompanionBuilder,
+          (TagRow, BaseReferences<_$AppDatabase, $TagsTable, TagRow>),
+          TagRow,
+          PrefetchHooks Function()
+        > {
+  $$TagsTableTableManager(_$AppDatabase db, $TagsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TagsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TagsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TagsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> clientUuid = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> color = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TagsCompanion(
+                clientUuid: clientUuid,
+                name: name,
+                color: color,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientUuid,
+                required String name,
+                Value<String?> color = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TagsCompanion.insert(
+                clientUuid: clientUuid,
+                name: name,
+                color: color,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TagsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TagsTable,
+      TagRow,
+      $$TagsTableFilterComposer,
+      $$TagsTableOrderingComposer,
+      $$TagsTableAnnotationComposer,
+      $$TagsTableCreateCompanionBuilder,
+      $$TagsTableUpdateCompanionBuilder,
+      (TagRow, BaseReferences<_$AppDatabase, $TagsTable, TagRow>),
+      TagRow,
+      PrefetchHooks Function()
+    >;
+typedef $$CollectionItemTagsTableCreateCompanionBuilder =
+    CollectionItemTagsCompanion Function({
+      required String itemClientUuid,
+      required String tagClientUuid,
+      Value<int> rowid,
+    });
+typedef $$CollectionItemTagsTableUpdateCompanionBuilder =
+    CollectionItemTagsCompanion Function({
+      Value<String> itemClientUuid,
+      Value<String> tagClientUuid,
+      Value<int> rowid,
+    });
+
+class $$CollectionItemTagsTableFilterComposer
+    extends Composer<_$AppDatabase, $CollectionItemTagsTable> {
+  $$CollectionItemTagsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get itemClientUuid => $composableBuilder(
+    column: $table.itemClientUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tagClientUuid => $composableBuilder(
+    column: $table.tagClientUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CollectionItemTagsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CollectionItemTagsTable> {
+  $$CollectionItemTagsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get itemClientUuid => $composableBuilder(
+    column: $table.itemClientUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tagClientUuid => $composableBuilder(
+    column: $table.tagClientUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CollectionItemTagsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CollectionItemTagsTable> {
+  $$CollectionItemTagsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get itemClientUuid => $composableBuilder(
+    column: $table.itemClientUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get tagClientUuid => $composableBuilder(
+    column: $table.tagClientUuid,
+    builder: (column) => column,
+  );
+}
+
+class $$CollectionItemTagsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CollectionItemTagsTable,
+          CollectionItemTagRow,
+          $$CollectionItemTagsTableFilterComposer,
+          $$CollectionItemTagsTableOrderingComposer,
+          $$CollectionItemTagsTableAnnotationComposer,
+          $$CollectionItemTagsTableCreateCompanionBuilder,
+          $$CollectionItemTagsTableUpdateCompanionBuilder,
+          (
+            CollectionItemTagRow,
+            BaseReferences<
+              _$AppDatabase,
+              $CollectionItemTagsTable,
+              CollectionItemTagRow
+            >,
+          ),
+          CollectionItemTagRow,
+          PrefetchHooks Function()
+        > {
+  $$CollectionItemTagsTableTableManager(
+    _$AppDatabase db,
+    $CollectionItemTagsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CollectionItemTagsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CollectionItemTagsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CollectionItemTagsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> itemClientUuid = const Value.absent(),
+                Value<String> tagClientUuid = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CollectionItemTagsCompanion(
+                itemClientUuid: itemClientUuid,
+                tagClientUuid: tagClientUuid,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String itemClientUuid,
+                required String tagClientUuid,
+                Value<int> rowid = const Value.absent(),
+              }) => CollectionItemTagsCompanion.insert(
+                itemClientUuid: itemClientUuid,
+                tagClientUuid: tagClientUuid,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CollectionItemTagsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CollectionItemTagsTable,
+      CollectionItemTagRow,
+      $$CollectionItemTagsTableFilterComposer,
+      $$CollectionItemTagsTableOrderingComposer,
+      $$CollectionItemTagsTableAnnotationComposer,
+      $$CollectionItemTagsTableCreateCompanionBuilder,
+      $$CollectionItemTagsTableUpdateCompanionBuilder,
+      (
+        CollectionItemTagRow,
+        BaseReferences<
+          _$AppDatabase,
+          $CollectionItemTagsTable,
+          CollectionItemTagRow
+        >,
+      ),
+      CollectionItemTagRow,
+      PrefetchHooks Function()
+    >;
+typedef $$TagSyncQueueTableCreateCompanionBuilder =
+    TagSyncQueueCompanion Function({
+      required String clientUuid,
+      required DateTime queuedAt,
+      Value<int> rowid,
+    });
+typedef $$TagSyncQueueTableUpdateCompanionBuilder =
+    TagSyncQueueCompanion Function({
+      Value<String> clientUuid,
+      Value<DateTime> queuedAt,
+      Value<int> rowid,
+    });
+
+class $$TagSyncQueueTableFilterComposer
+    extends Composer<_$AppDatabase, $TagSyncQueueTable> {
+  $$TagSyncQueueTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get queuedAt => $composableBuilder(
+    column: $table.queuedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TagSyncQueueTableOrderingComposer
+    extends Composer<_$AppDatabase, $TagSyncQueueTable> {
+  $$TagSyncQueueTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get queuedAt => $composableBuilder(
+    column: $table.queuedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TagSyncQueueTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TagSyncQueueTable> {
+  $$TagSyncQueueTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clientUuid => $composableBuilder(
+    column: $table.clientUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get queuedAt =>
+      $composableBuilder(column: $table.queuedAt, builder: (column) => column);
+}
+
+class $$TagSyncQueueTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TagSyncQueueTable,
+          TagSyncQueueRow,
+          $$TagSyncQueueTableFilterComposer,
+          $$TagSyncQueueTableOrderingComposer,
+          $$TagSyncQueueTableAnnotationComposer,
+          $$TagSyncQueueTableCreateCompanionBuilder,
+          $$TagSyncQueueTableUpdateCompanionBuilder,
+          (
+            TagSyncQueueRow,
+            BaseReferences<_$AppDatabase, $TagSyncQueueTable, TagSyncQueueRow>,
+          ),
+          TagSyncQueueRow,
+          PrefetchHooks Function()
+        > {
+  $$TagSyncQueueTableTableManager(_$AppDatabase db, $TagSyncQueueTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TagSyncQueueTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TagSyncQueueTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TagSyncQueueTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> clientUuid = const Value.absent(),
+                Value<DateTime> queuedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TagSyncQueueCompanion(
+                clientUuid: clientUuid,
+                queuedAt: queuedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientUuid,
+                required DateTime queuedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => TagSyncQueueCompanion.insert(
+                clientUuid: clientUuid,
+                queuedAt: queuedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TagSyncQueueTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TagSyncQueueTable,
+      TagSyncQueueRow,
+      $$TagSyncQueueTableFilterComposer,
+      $$TagSyncQueueTableOrderingComposer,
+      $$TagSyncQueueTableAnnotationComposer,
+      $$TagSyncQueueTableCreateCompanionBuilder,
+      $$TagSyncQueueTableUpdateCompanionBuilder,
+      (
+        TagSyncQueueRow,
+        BaseReferences<_$AppDatabase, $TagSyncQueueTable, TagSyncQueueRow>,
+      ),
+      TagSyncQueueRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4418,4 +5812,9 @@ class $AppDatabaseManager {
       $$CollectionItemsTableTableManager(_db, _db.collectionItems);
   $$SyncQueueTableTableManager get syncQueue =>
       $$SyncQueueTableTableManager(_db, _db.syncQueue);
+  $$TagsTableTableManager get tags => $$TagsTableTableManager(_db, _db.tags);
+  $$CollectionItemTagsTableTableManager get collectionItemTags =>
+      $$CollectionItemTagsTableTableManager(_db, _db.collectionItemTags);
+  $$TagSyncQueueTableTableManager get tagSyncQueue =>
+      $$TagSyncQueueTableTableManager(_db, _db.tagSyncQueue);
 }

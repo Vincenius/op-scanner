@@ -16,6 +16,9 @@ final _cardProvider = FutureProvider.family<CatalogCard?, String>(
 final _variantsProvider = StreamProvider.family<List<CatalogVariant>, String>(
   (ref, cardId) => ref.watch(catalogRepositoryProvider).watchVariantsForCard(cardId),
 );
+final _variantTagsProvider = StreamProvider.family<List<TagRow>, String>(
+  (ref, variantId) => ref.watch(collectionRepositoryProvider).watchTagsForVariant(variantId),
+);
 
 class CardDetailScreen extends ConsumerWidget {
   const CardDetailScreen({super.key, required this.cardId});
@@ -136,6 +139,7 @@ class _VariantRow extends ConsumerWidget {
                     ].join(' · '),
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                   ),
+                  _OwnedTags(variantId: variant.variantId),
                 ],
               ),
             ),
@@ -157,6 +161,32 @@ class _VariantRow extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Shows the user's tags for a variant (empty when not owned / untagged).
+class _OwnedTags extends ConsumerWidget {
+  const _OwnedTags({required this.variantId});
+  final String variantId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tags = ref.watch(_variantTagsProvider(variantId)).asData?.value ?? const [];
+    if (tags.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 2,
+        children: [
+          Icon(Icons.label_outline, size: 14, color: theme.colorScheme.primary),
+          for (final t in tags)
+            Text(t.name,
+                style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

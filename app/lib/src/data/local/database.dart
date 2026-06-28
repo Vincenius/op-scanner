@@ -96,12 +96,56 @@ class SyncQueue extends Table {
   Set<Column> get primaryKey => {clientUuid};
 }
 
-@DriftDatabase(tables: [Sets, Cards, Variants, SyncMeta, CollectionItems, SyncQueue])
+// User-defined tags ("deck boxes"). Synced like collection items.
+@DataClassName('TagRow')
+class Tags extends Table {
+  TextColumn get clientUuid => text()();
+  TextColumn get name => text()();
+  TextColumn get color => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {clientUuid};
+}
+
+// Local item<->tag links (keyed by clientUuids so they survive sync).
+@DataClassName('CollectionItemTagRow')
+class CollectionItemTags extends Table {
+  TextColumn get itemClientUuid => text()();
+  TextColumn get tagClientUuid => text()();
+
+  @override
+  Set<Column> get primaryKey => {itemClientUuid, tagClientUuid};
+}
+
+// Pending tag mutations (coalesced, one row per dirty tag).
+@DataClassName('TagSyncQueueRow')
+class TagSyncQueue extends Table {
+  TextColumn get clientUuid => text()();
+  DateTimeColumn get queuedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {clientUuid};
+}
+
+@DriftDatabase(tables: [
+  Sets,
+  Cards,
+  Variants,
+  SyncMeta,
+  CollectionItems,
+  SyncQueue,
+  Tags,
+  CollectionItemTags,
+  TagSyncQueue,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -111,6 +155,11 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(collectionItems);
             await m.createTable(syncQueue);
             await m.addColumn(syncMeta, syncMeta.collectionLastSyncAt);
+          }
+          if (from < 3) {
+            await m.createTable(tags);
+            await m.createTable(collectionItemTags);
+            await m.createTable(tagSyncQueue);
           }
         },
       );
@@ -154,11 +203,14 @@ class AppDatabase extends _$AppDatabase {
     return row.read(count) ?? 0;
   }
 
-  /// Wipe local collection state (used on logout / account switch).
+  /// Wipe local collection + tag state (used on logout / account switch).
   Future<void> clearCollection() async {
     await transaction(() async {
       await delete(collectionItems).go();
       await delete(syncQueue).go();
+      await delete(tags).go();
+      await delete(collectionItemTags).go();
+      await delete(tagSyncQueue).go();
       await (update(syncMeta)..where((t) => t.id.equals(1)))
           .write(const SyncMetaCompanion(collectionLastSyncAt: Value(null)));
     });

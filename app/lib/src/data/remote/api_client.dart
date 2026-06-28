@@ -135,12 +135,14 @@ class ApiClient {
   // --- Collection ---
   Future<Map<String, dynamic>> collectionSync(
     DateTime? since,
+    List<Map<String, dynamic>> tags,
     List<Map<String, dynamic>> mutations,
   ) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/collection/sync',
       data: {
         if (since != null) 'since': since.toUtc().toIso8601String(),
+        'tags': tags,
         'mutations': mutations,
       },
     );

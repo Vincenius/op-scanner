@@ -8,6 +8,7 @@ import 'data/collection_sync_service.dart';
 import 'data/local/database.dart';
 import 'data/remote/api_client.dart';
 import 'data/sync_service.dart';
+import 'data/tag_repository.dart';
 import 'features/catalog/catalog_filter.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -29,6 +30,15 @@ final collectionRepositoryProvider = Provider<CollectionRepository>(
   (ref) => CollectionRepository(ref.watch(databaseProvider)),
 );
 
+final tagRepositoryProvider = Provider<TagRepository>(
+  (ref) => TagRepository(ref.watch(databaseProvider)),
+);
+
+/// Active (non-deleted) tags, reactive.
+final tagsProvider = StreamProvider<List<TagRow>>(
+  (ref) => ref.watch(tagRepositoryProvider).watchActive(),
+);
+
 final collectionSyncServiceProvider = Provider<CollectionSyncService>(
   (ref) => CollectionSyncService(ref.watch(databaseProvider), ref.watch(apiClientProvider)),
 );
@@ -43,6 +53,7 @@ class CollectionFilterNotifier extends Notifier<CollectionFilter> {
   void setQuery(String q) => state = state.copyWith(query: q);
   void setSort(CollectionSort s) => state = state.copyWith(sort: s);
   void setCondition(String? c) => state = state.copyWith(condition: c);
+  void setTag(String? tagClientUuid) => state = state.copyWith(tagClientUuid: tagClientUuid);
 }
 
 final collectionEntriesProvider = StreamProvider<List<CollectionEntry>>((ref) {
