@@ -48,6 +48,19 @@ class CollectionActions {
     _flush();
   }
 
+  /// Add a scanned card and apply the active scan tag (if any).
+  Future<void> addScanned(String variantId, {String? tagClientUuid, String condition = 'NM'}) async {
+    final repo = _ref.read(collectionRepositoryProvider);
+    final itemUuid = await repo.addOne(variantId, condition: condition);
+    if (tagClientUuid != null) {
+      final current = await repo.liveTagUuidsFor(itemUuid);
+      if (!current.contains(tagClientUuid)) {
+        await repo.setItemTags(itemUuid, [...current, tagClientUuid]);
+      }
+    }
+    _flush();
+  }
+
   Future<void> setQuantity(CollectionItemRow item, int quantity) async {
     await _ref.read(collectionRepositoryProvider).setQuantity(item, quantity);
     _flush();

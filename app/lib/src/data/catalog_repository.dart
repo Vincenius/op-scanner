@@ -90,6 +90,25 @@ class CatalogRepository {
     return rows.map((r) => r.read<String>('v')).toList();
   }
 
+  /// {variantId: phash} for all variants with a hash (the on-device match DB).
+  Future<Map<String, String>> phashDb() async {
+    final rows = await (_db.select(_db.variants)..where((v) => v.phash.isNotNull())).get();
+    return {for (final r in rows) r.variantId: r.phash!};
+  }
+
+  /// Variant ids belonging to a base card code (OCR prefilter scope).
+  Future<List<String>> variantIdsForCode(String cardCode) async {
+    final q = _db.select(_db.variants).join([
+      innerJoin(_db.cards, _db.cards.id.equalsExp(_db.variants.cardId)),
+    ])
+      ..where(_db.cards.cardCode.equals(cardCode));
+    final rows = await q.get();
+    return rows.map((r) => r.readTable(_db.variants).variantId).toList();
+  }
+
+  Future<CatalogVariant?> variantById(String variantId) =>
+      (_db.select(_db.variants)..where((v) => v.variantId.equals(variantId))).getSingleOrNull();
+
   Future<List<String>> setCodes() =>
       _distinct("SELECT DISTINCT set_code AS v FROM cards WHERE set_code != '' ORDER BY v");
   Future<List<String>> rarities() => _distinct(

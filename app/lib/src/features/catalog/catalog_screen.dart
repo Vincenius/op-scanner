@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/platform.dart';
 import '../../data/catalog_repository.dart';
 import '../../data/sync_service.dart';
 import '../../providers.dart';
@@ -20,6 +21,13 @@ class CatalogScreen extends ConsumerWidget {
     final localCount = ref.watch(localVariantCountProvider).asData?.value ?? 0;
 
     return Scaffold(
+      floatingActionButton: isScanningSupported
+          ? FloatingActionButton.extended(
+              onPressed: () => context.go('/scan'),
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Scan'),
+            )
+          : null,
       appBar: AppBar(
         title: const Text('Catalog'),
         actions: [
