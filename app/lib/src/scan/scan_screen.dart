@@ -26,6 +26,10 @@ final _codeRegex = RegExp(r'\b((?:OP|ST|EB)\d{2}-\d{3}|P-\d{3})\b', caseSensitiv
 const int _stableNeeded = 2;
 // Empty/no-match frames before the same card may be added again.
 const int _resetAfterEmpty = 3;
+// Once a card is recognized, keep its result card (and the Add button) on screen
+// at least this long after it stops being recognized, so the user can still tap
+// Add. A newly recognized card replaces it immediately.
+const Duration _outcomeHold = Duration(seconds: 4);
 // Minimum spacing between processed frames. Frames arriving while one is being
 // processed are dropped; this also paces work so the UI isolate keeps breathing.
 const Duration _minProcessGap = Duration(milliseconds: 90);
@@ -66,6 +70,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
   int _stableCount = 0;
   String? _lastAddedVariant;
   int _emptyFrames = 0;
+  // When the currently shown result was last (re)recognized — drives the hold.
+  DateTime _outcomeAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   // Frame pacing + OCR throttle.
   DateTime _lastProcessed = DateTime.fromMillisecondsSinceEpoch(0);
@@ -290,14 +296,18 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
     final variant = await repo.variantById(top.variantId);
     final name = variant != null ? (await repo.cardById(variant.cardId))?.name : null;
 
-    var added = false;
-    final shouldAdd = _stableCount >= _stableNeeded && top.variantId != _lastAddedVariant;
+    // Treat a card we've already added (this presentation) as added, so its
+    // result keeps showing the ✓ instead of flipping back to an Add button —
+    // and we never auto/double-add it again until it leaves the frame.
+    var added = top.variantId == _lastAddedVariant;
+    final shouldAdd = _stableCount >= _stableNeeded && !added;
     if (shouldAdd && ref.read(rapidAddProvider)) {
       await _add(top.variantId, name ?? top.variantId);
       _lastAddedVariant = top.variantId;
       added = true;
     }
     if (mounted) {
+      _outcomeAt = DateTime.now();
       setState(() => _outcome = _ScanOutcome(result, code, variant, name, added));
     }
   }
@@ -308,7 +318,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
     _stableCount = 0;
     if (_emptyFrames >= _resetAfterEmpty) {
       _lastAddedVariant = null;
-      if (mounted && _outcome != null) setState(() => _outcome = null);
+    }
+    // Hold the last recognized card (and its Add button) for a few seconds after
+    // it leaves the frame so the user can still tap Add; clear only once the hold
+    // elapses. A newly recognized card replaces it immediately via _onResult.
+    if (_outcome != null && DateTime.now().difference(_outcomeAt) >= _outcomeHold) {
+      if (mounted) setState(() => _outcome = null);
     }
   }
 
@@ -319,6 +334,20 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Added $label'), duration: const Duration(milliseconds: 800)),
       );
+    }
+  }
+
+  /// Manual Add tap from the result card: record it, show the ✓ in place of the
+  /// button, and refresh the hold so the confirmation stays visible.
+  Future<void> _manualAdd(String variantId, String label) async {
+    await _add(variantId, label);
+    _lastAddedVariant = variantId;
+    final o = _outcome;
+    if (mounted && o != null && o.topVariant?.variantId == variantId) {
+      _outcomeAt = DateTime.now();
+      setState(() {
+        _outcome = _ScanOutcome(o.result, o.code, o.topVariant, o.topName, true);
+      });
     }
   }
 
@@ -402,7 +431,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
           if (noData)
             _SyncPrompt(running: sync.running, progress: sync.progress, onSync: _syncAndRetry)
           else if (outcome != null && outcome.topVariant != null)
-            _ResultCard(outcome: outcome, onAdd: _add)
+            _ResultCard(outcome: outcome, onAdd: _manualAdd)
           else
             const SizedBox(
               height: 48,

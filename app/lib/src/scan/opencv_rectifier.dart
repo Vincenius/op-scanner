@@ -24,6 +24,12 @@ const double _ratioMax = 0.97;
 // quad is scaled back up for the full-resolution warp.
 const int _detectTarget = 600;
 
+// The morphology kernel is constant, so build it once and reuse it across every
+// frame instead of allocating + disposing a Mat per detection.
+cv.Mat? _closeKernel;
+cv.Mat _morphCloseKernel() =>
+    _closeKernel ??= cv.getStructuringElement(cv.MORPH_RECT, (7, 7));
+
 /// Detect the largest card-like quadrilateral and perspective-warp it to a
 /// canonical upright RGB image (single best-guess orientation). Used by the
 /// rectifier test and the encoded-bytes path. Returns null if no quad is found.
@@ -116,8 +122,7 @@ cv.VecPoint? _findCardQuad(cv.Mat bgr) {
   final blurred = cv.gaussianBlur(gray, (5, 5), 0);
   final edges = cv.canny(blurred, 50, 150);
   // Close gaps + thicken so the card border forms one closed contour.
-  final kernel = cv.getStructuringElement(cv.MORPH_RECT, (7, 7));
-  final closed = cv.morphologyEx(edges, cv.MORPH_CLOSE, kernel);
+  final closed = cv.morphologyEx(edges, cv.MORPH_CLOSE, _morphCloseKernel());
   final (contours, hierarchy) = cv.findContours(closed, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
   final imgArea = (work.rows * work.cols).toDouble();
@@ -140,7 +145,6 @@ cv.VecPoint? _findCardQuad(cv.Mat bgr) {
   gray.dispose();
   blurred.dispose();
   edges.dispose();
-  kernel.dispose();
   closed.dispose();
   contours.dispose();
   hierarchy.dispose();
