@@ -47,7 +47,7 @@ class _SignedOut extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: () => context.go('/login'),
+                onPressed: () => context.push('/login'),
                 icon: const Icon(Icons.login),
                 label: const Text('Sign in'),
               ),
@@ -95,7 +95,7 @@ class _CollectionView extends ConsumerWidget {
           ),
           IconButton(
             tooltip: 'Stats',
-            onPressed: () => context.go('/collection/stats'),
+            onPressed: () => context.push('/collection/stats'),
             icon: const Icon(Icons.insights_outlined),
           ),
           IconButton(
@@ -107,7 +107,7 @@ class _CollectionView extends ConsumerWidget {
             icon: const Icon(Icons.account_circle_outlined),
             onSelected: (v) {
               if (v == 'logout') ref.read(authControllerProvider.notifier).logout();
-              if (v == 'settings') context.go('/settings');
+              if (v == 'settings') context.push('/settings');
             },
             itemBuilder: (_) => [
               PopupMenuItem(enabled: false, child: Text(email)),
@@ -242,7 +242,7 @@ class _CollectionTile extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: InkWell(
-        onTap: () => context.go('/card/${entry.variant.cardId}'),
+        onTap: () => context.push('/card/${entry.variant.cardId}'),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(10),

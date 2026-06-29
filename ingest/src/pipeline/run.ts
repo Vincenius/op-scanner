@@ -21,8 +21,35 @@ export async function runIngest(config: IngestConfig): Promise<void> {
   ]);
   console.log(`[ingest] fetched ${sets.length} sets, ${cards.length} cards`);
 
+  // Gap-fill the catalog from the price source for any sets/cards the metadata
+  // source doesn't carry yet. apitcg lags behind on the newest sets (it stopped
+  // at OP12 while optcgapi already lists OP13–OP16), so those sets would
+  // otherwise never enter the catalog and their prices would be skipped. The
+  // metadata source stays authoritative wherever it has the card; the price
+  // source only contributes what's missing (and is overwritten on a later run
+  // once the metadata source catches up).
+  let mergedSets = sets;
+  let mergedCards = cards;
+  if (prices !== metadata) {
+    const [pSets, pCards] = await Promise.all([
+      prices.fetchSets(),
+      prices.fetchCards(),
+    ]);
+    const haveCards = new Set(cards.map((c) => c.cardCode));
+    const haveSets = new Set(sets.map((s) => s.code));
+    const extraCards = pCards.filter((c) => !haveCards.has(c.cardCode));
+    const extraSets = pSets.filter((s) => !haveSets.has(s.code));
+    if (extraCards.length || extraSets.length) {
+      mergedSets = [...sets, ...extraSets];
+      mergedCards = [...cards, ...extraCards];
+      console.log(
+        `[ingest] catalog gap-fill from ${prices.id}: +${extraSets.length} sets, +${extraCards.length} cards (${extraSets.map((s) => s.code).join(', ')})`,
+      );
+    }
+  }
+
   console.log('[ingest] upserting catalog...');
-  const catalogStats = await upsertCatalog(sets, cards);
+  const catalogStats = await upsertCatalog(mergedSets, mergedCards);
   console.log(
     `[ingest] catalog: ${catalogStats.sets} sets, ${catalogStats.cards} cards, ${catalogStats.variants} variants`,
   );

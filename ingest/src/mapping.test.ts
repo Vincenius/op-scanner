@@ -24,6 +24,8 @@ describe('splitColors', () => {
   it('splits dual colors and trims', () => {
     expect(splitColors('Black')).toEqual(['Black']);
     expect(splitColors('Red/Green')).toEqual(['Red', 'Green']);
+    expect(splitColors('Red Black')).toEqual(['Red', 'Black']);
+    expect(splitColors('Purple Red')).toEqual(['Purple', 'Red']);
     expect(splitColors('')).toEqual([]);
     expect(splitColors(undefined)).toEqual([]);
   });

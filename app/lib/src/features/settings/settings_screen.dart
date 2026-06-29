@@ -47,7 +47,7 @@ class SettingsScreen extends ConsumerWidget {
               leading: const Icon(Icons.login),
               title: const Text('Sign in'),
               subtitle: const Text('Track and sync your collection'),
-              onTap: () => context.go('/login'),
+              onTap: () => context.push('/login'),
             ),
           if (auth.isAuthenticated) ...[
             const Divider(),
@@ -151,7 +151,7 @@ class _ShareSection extends ConsumerWidget {
                     IconButton(
                       tooltip: 'Open',
                       icon: const Icon(Icons.open_in_new, size: 20),
-                      onPressed: () => context.go('/share/$slug'),
+                      onPressed: () => context.push('/share/$slug'),
                     ),
                   ],
                 ),

@@ -163,7 +163,7 @@ class _VariantRow extends ConsumerWidget {
                   AddToCollectionSheet.show(context,
                       variantId: variant.variantId, title: '$cardName · ${variant.variantId}');
                 } else {
-                  context.go('/login');
+                  context.push('/login');
                 }
               },
             ),

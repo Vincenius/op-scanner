@@ -265,7 +265,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
     return Stack(
       fit: StackFit.expand,
       children: [
-        CameraPreview(camera),
+        _CameraFill(controller: camera),
         Center(
           child: AspectRatio(
             aspectRatio: 600 / 838,
@@ -310,6 +310,39 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Fills the available space with the live preview at the camera's true aspect
+/// ratio (BoxFit.cover). A bare [CameraPreview] given the tight constraints of
+/// an expanded Stack stretches the texture (skewed preview); here CameraPreview
+/// keeps its ratio under loose constraints and we scale it up to cover the box.
+class _CameraFill extends StatelessWidget {
+  const _CameraFill({required this.controller});
+
+  final CameraController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // CameraPreview reports its ratio in landscape; on a portrait device it
+        // renders rotated, so the on-screen ratio is the reciprocal.
+        final portrait =
+            MediaQuery.orientationOf(context) == Orientation.portrait;
+        final previewRatio = controller.value.aspectRatio;
+        final shownRatio = portrait ? 1 / previewRatio : previewRatio;
+        final boxRatio = constraints.maxWidth / constraints.maxHeight;
+        final scale =
+            shownRatio > boxRatio ? shownRatio / boxRatio : boxRatio / shownRatio;
+        return ClipRect(
+          child: Transform.scale(
+            scale: scale,
+            child: Center(child: CameraPreview(controller)),
+          ),
+        );
+      },
     );
   }
 }

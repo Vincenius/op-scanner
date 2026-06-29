@@ -33,11 +33,16 @@ export function cleanText(value: unknown): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
-/** "Red/Green" -> ["Red","Green"]; "Black" -> ["Black"]; "" -> []. */
+/**
+ * Split a color string into individual colors. Handles both the apitcg
+ * convention ("Red/Green") and the optcgapi convention ("Red Green"); no One
+ * Piece color name contains a space, so splitting on whitespace is safe.
+ * "Black" -> ["Black"]; "" -> [].
+ */
 export function splitColors(value: unknown): string[] {
   if (typeof value !== 'string') return [];
   return value
-    .split('/')
+    .split(/[/\s]+/)
     .map((c) => c.trim())
     .filter((c) => c.length > 0);
 }

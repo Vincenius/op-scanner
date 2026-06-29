@@ -23,7 +23,7 @@ class CatalogScreen extends ConsumerWidget {
     return Scaffold(
       floatingActionButton: isScanningSupported
           ? FloatingActionButton.extended(
-              onPressed: () => context.go('/scan'),
+              onPressed: () => context.push('/scan'),
               icon: const Icon(Icons.qr_code_scanner),
               label: const Text('Scan'),
             )
@@ -48,7 +48,7 @@ class CatalogScreen extends ConsumerWidget {
           ),
           IconButton(
             tooltip: 'Settings',
-            onPressed: () => context.go('/settings'),
+            onPressed: () => context.push('/settings'),
             icon: const Icon(Icons.settings_outlined),
           ),
         ],
@@ -228,7 +228,7 @@ class _CatalogCardTile extends StatelessWidget {
     final v = item.variant;
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => context.go('/card/${v.cardId}'),
+      onTap: () => context.push('/card/${v.cardId}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
