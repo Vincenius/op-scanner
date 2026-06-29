@@ -13,9 +13,10 @@ import '../data/sync_service.dart';
 import '../providers.dart';
 import '../util/format.dart';
 import '../features/catalog/widgets/card_thumb.dart';
+import 'camera_image_convert.dart';
 import 'matcher.dart';
+import 'opencv_rectifier.dart';
 import 'phash.dart';
-import 'process_frame.dart';
 import 'scan_controller.dart';
 
 // Card code formats: OP01-016, ST14-001, EB02-061, P-001 (promo).
@@ -25,7 +26,13 @@ final _codeRegex = RegExp(r'\b((?:OP|ST|EB)\d{2}-\d{3}|P-\d{3})\b', caseSensitiv
 const int _stableNeeded = 2;
 // Empty/no-match frames before the same card may be added again.
 const int _resetAfterEmpty = 3;
-const Duration _frameGap = Duration(milliseconds: 250);
+// Minimum spacing between processed frames. Frames arriving while one is being
+// processed are dropped; this also paces work so the UI isolate keeps breathing.
+const Duration _minProcessGap = Duration(milliseconds: 90);
+// OCR (ML Kit) is comparatively expensive, so it runs off the recognition hot
+// path: at most this often, with the last read code reused in between.
+const Duration _ocrInterval = Duration(milliseconds: 600);
+const Duration _ocrTtl = Duration(milliseconds: 1500);
 
 class _ScanOutcome {
   _ScanOutcome(this.result, this.code, this.topVariant, this.topName, this.added);
@@ -49,6 +56,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
   Map<String, String> _db = const {};
   bool _scanning = false;
   bool _processing = false;
+  bool _streaming = false;
+  int _sensorOrientation = 0;
   String? _error;
   _ScanOutcome? _outcome;
 
@@ -57,6 +66,13 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
   int _stableCount = 0;
   String? _lastAddedVariant;
   int _emptyFrames = 0;
+
+  // Frame pacing + OCR throttle.
+  DateTime _lastProcessed = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime _lastOcrAt = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _ocrBusy = false;
+  String? _recentCode;
+  DateTime _recentCodeAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void initState() {
@@ -68,15 +84,16 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Release the camera when backgrounded (the OS may reclaim it) and re-init
-    // on resume, so the loop doesn't spin on a dead/invalid controller.
+    // on resume, so we don't stream into a dead/invalid controller.
     if (state == AppLifecycleState.resumed) {
       if (_camera == null) _resumeCamera();
     } else {
       _scanning = false;
+      _streaming = false;
       final c = _camera;
       _camera = null;
       if (mounted) setState(() {});
-      c?.dispose();
+      c?.dispose(); // dispose() also stops the image stream
     }
   }
 
@@ -84,7 +101,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
     await _initCamera();
     if (_camera != null && _db.isNotEmpty) {
       _scanning = true;
-      _loop();
+      await _startStream();
     }
   }
 
@@ -98,10 +115,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
     if (_camera == null) await _initCamera();
     if (_camera != null && _db.isNotEmpty) {
       if (mounted) setState(() => _error = null);
-      if (!_scanning) {
-        _scanning = true;
-        _loop();
-      }
+      _scanning = true;
+      await _startStream();
     } else if (_db.isEmpty) {
       if (mounted) {
         setState(() => _error = 'No recognition data yet — sync the catalog first.');
@@ -129,7 +144,16 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
         (c) => c.lensDirection == CameraLensDirection.back,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(back, ResolutionPreset.high, enableAudio: false);
+      _sensorOrientation = back.sensorOrientation;
+      // Request a format we can wrap directly into an OpenCV Mat (and feed ML
+      // Kit) without re-encoding: NV21 on Android, BGRA on iOS.
+      final format = Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888;
+      final controller = CameraController(
+        back,
+        ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: format,
+      );
       await controller.initialize();
       if (!mounted) {
         await controller.dispose();
@@ -144,52 +168,109 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
   @override
   void dispose() {
     _scanning = false;
+    _streaming = false;
     WidgetsBinding.instance.removeObserver(this);
     _camera?.dispose();
     _recognizer.close();
     super.dispose();
   }
 
-  /// Continuous auto-capture loop (no manual tap). Each tick captures a frame,
-  /// recognizes it, and auto-adds confident, stable, not-just-added cards.
-  Future<void> _loop() async {
-    while (_scanning && mounted) {
-      final camera = _camera;
-      if (camera != null && camera.value.isInitialized && !_processing) {
-        await _tick(camera);
-      }
-      await Future.delayed(_frameGap);
+  Future<void> _startStream() async {
+    final camera = _camera;
+    if (camera == null || _streaming || _db.isEmpty) return;
+    if (!camera.value.isInitialized) return;
+    _streaming = true;
+    try {
+      await camera.startImageStream(_onFrame);
+    } catch (e) {
+      _streaming = false;
+      if (mounted) setState(() => _error = 'Scan stream unavailable: $e');
     }
   }
 
-  Future<void> _tick(CameraController camera) async {
+  /// Live-preview frame callback. Frames that arrive while one is in flight (or
+  /// inside the pacing window) are dropped — recognition runs as fast as the
+  /// pipeline allows without queueing stale frames or starving the UI.
+  void _onFrame(CameraImage image) {
+    if (!_scanning || _processing) return;
+    final now = DateTime.now();
+    if (now.difference(_lastProcessed) < _minProcessGap) return;
     _processing = true;
-    try {
-      final shot = await camera.takePicture();
-      final bytes = await File(shot.path).readAsBytes();
-      final code = await _ocrCode(shot.path);
-      try {
-        await File(shot.path).delete();
-      } catch (_) {}
+    _lastProcessed = now;
+    _handleFrame(image).whenComplete(() => _processing = false);
+  }
 
-      final rgb = rectifyPhoto(bytes);
-      if (rgb == null) {
-        _onNoMatch();
-        return;
+  Future<void> _handleFrame(CameraImage image) async {
+    List<String>? hashes;
+    try {
+      // Synchronous section — runs before the first await, while the frame
+      // buffer is still valid: convert to BGR, detect + rectify the card (both
+      // upright orientations), and hash each.
+      final bgr = cameraImageToBgr(image);
+      if (bgr != null) {
+        try {
+          var rgbs = rectifyCardOrientations(bgr);
+          if (rgbs.isEmpty) rgbs = centerCropOrientations(bgr);
+          hashes = [for (final r in rgbs) phashFromRgb(r)];
+        } finally {
+          bgr.dispose();
+        }
       }
+      // Fire-and-forget OCR (throttled); updates the cached code for later
+      // frames without blocking this one.
+      _maybeOcr(image);
+    } catch (_) {
+      // Transient decode/detect errors shouldn't stop the stream.
+    }
+
+    if (hashes == null || hashes.isEmpty) {
+      _onNoMatch();
+      return;
+    }
+
+    try {
+      final code = _freshCode();
       final repo = ref.read(catalogRepositoryProvider);
       final restrict = code != null ? await repo.variantIdsForCode(code) : null;
-      final result = matchHash(
-        phashFromRgb(rgb),
+      final result = matchHashMulti(
+        hashes,
         _db,
         restrictTo: (restrict?.isEmpty ?? true) ? null : restrict,
       );
       await _onResult(result, code, repo);
-    } catch (e) {
-      // Transient capture/decode errors shouldn't stop the loop.
-    } finally {
-      _processing = false;
+    } catch (_) {
+      // Matching/repo errors shouldn't stop the stream.
     }
+  }
+
+  /// Run OCR on a throttle, off the recognition hot path. The detected card code
+  /// is cached and reused (within [_ocrTtl]) to restrict match candidates.
+  void _maybeOcr(CameraImage image) {
+    if (_ocrBusy) return;
+    final now = DateTime.now();
+    if (now.difference(_lastOcrAt) < _ocrInterval) return;
+    final input = inputImageFromCameraImage(image, _sensorOrientation);
+    if (input == null) return; // format not OCR-able (e.g. yuv420 fallback)
+    _lastOcrAt = now;
+    _ocrBusy = true;
+    _ocr(input).whenComplete(() => _ocrBusy = false);
+  }
+
+  Future<void> _ocr(InputImage input) async {
+    try {
+      final recognized = await _recognizer.processImage(input);
+      final code = _codeRegex.firstMatch(recognized.text)?.group(0)?.toUpperCase();
+      if (code != null) {
+        _recentCode = code;
+        _recentCodeAt = DateTime.now();
+      }
+    } catch (_) {}
+  }
+
+  String? _freshCode() {
+    if (_recentCode == null) return null;
+    if (DateTime.now().difference(_recentCodeAt) > _ocrTtl) return null;
+    return _recentCode;
   }
 
   Future<void> _onResult(MatchResult result, String? code, CatalogRepository repo) async {
@@ -228,15 +309,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
     if (_emptyFrames >= _resetAfterEmpty) {
       _lastAddedVariant = null;
       if (mounted && _outcome != null) setState(() => _outcome = null);
-    }
-  }
-
-  Future<String?> _ocrCode(String path) async {
-    try {
-      final recognized = await _recognizer.processImage(InputImage.fromFilePath(path));
-      return _codeRegex.firstMatch(recognized.text)?.group(0)?.toUpperCase();
-    } catch (_) {
-      return null;
     }
   }
 
@@ -307,7 +379,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
           left: 0,
           right: 0,
           child: Center(
-            child: Text('Point at a card — scanning automatically',
+            child: Text('Point at a card — any angle, scanning automatically',
                 style: TextStyle(color: Colors.white70, fontSize: 12)),
           ),
         ),

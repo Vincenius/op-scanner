@@ -91,15 +91,24 @@ String phashFromRgb(RgbImage img) {
   return _hashChannel(ch[0]) + _hashChannel(ch[1]) + _hashChannel(ch[2]);
 }
 
+// Popcount of a 4-bit nibble (0..15) and hex-char → value, so [hammingHex] can
+// run a tight per-character loop instead of int.parse + bit-shift. Matching the
+// query against the whole local DB happens every frame, so this is hot.
+const List<int> _popcount4 = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
+
+int _hexVal(int code) {
+  if (code >= 0x30 && code <= 0x39) return code - 0x30; // '0'-'9'
+  if (code >= 0x61 && code <= 0x66) return code - 0x57; // 'a'-'f'
+  if (code >= 0x41 && code <= 0x46) return code - 0x37; // 'A'-'F'
+  return 0;
+}
+
 /// Hamming distance between two 48-hex hashes (0..192).
 int hammingHex(String a, String b) {
+  final n = a.length < b.length ? a.length : b.length;
   var dist = 0;
-  for (var i = 0; i < a.length; i++) {
-    var x = int.parse(a[i], radix: 16) ^ int.parse(b[i], radix: 16);
-    while (x > 0) {
-      dist += x & 1;
-      x >>= 1;
-    }
+  for (var i = 0; i < n; i++) {
+    dist += _popcount4[_hexVal(a.codeUnitAt(i)) ^ _hexVal(b.codeUnitAt(i))];
   }
   return dist;
 }

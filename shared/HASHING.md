@@ -100,6 +100,19 @@ AND dist(top2) - dist(top1) >= ACCEPT_MARGIN   (default 12)
 Otherwise present the top-3 for the user to confirm. Thresholds are tunable via
 the eval harness (`/ingest` bench or the client eval test); record changes here.
 
+### Query-side orientation normalization (client)
+
+`card_variant.phash` stores a single **upright** hash; we do NOT precompute
+rotated/mirrored variants. Instead the live scanner makes the *query* rotation-
+invariant: OpenCV warps the detected card quad so its **short edge becomes the
+top** (always portrait, folding in any 90°/270° in-frame rotation), then hashes
+both that warp **and its 180° rotation**. `matchHashMulti` scores every query
+orientation against each stored hash and keeps the smaller distance. The wrong
+orientation lands its crop on the card's text box (not the art) and scores far,
+so the correct upright orientation wins. This keeps the stored hash domain
+unchanged — adding orientation handling needs no recompute. (Mirroring can't
+occur: corners are ordered clockwise to match the destination winding.)
+
 ## Versioning
 
 Bump this version and recompute all hashes if any of: CROP, downscale, DCT block

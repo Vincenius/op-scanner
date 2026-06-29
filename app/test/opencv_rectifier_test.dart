@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
+import 'package:op_scanner/src/scan/matcher.dart';
 import 'package:op_scanner/src/scan/opencv_rectifier.dart';
 import 'package:op_scanner/src/scan/phash.dart';
 
@@ -80,5 +81,76 @@ void main() {
     src.dispose();
     dst.dispose();
     m.dispose();
+  }, skip: !_opencvAvailable() ? 'dartcv native lib not available (set DARTCV_LIB_PATH)' : null);
+
+  // Render [cardImg] into a blank canvas at the given destination quad.
+  cv.Mat renderOnCanvas(cv.Mat cardImg, List<cv.Point> dstQuad, int cw, int ch) {
+    final canvas = cv.Mat.zeros(ch, cw, cv.MatType.CV_8UC3);
+    final src = cv.VecPoint.fromList([
+      cv.Point(0, 0),
+      cv.Point(cardImg.cols - 1, 0),
+      cv.Point(cardImg.cols - 1, cardImg.rows - 1),
+      cv.Point(0, cardImg.rows - 1),
+    ]);
+    final dst = cv.VecPoint.fromList(dstQuad);
+    final m = cv.getPerspectiveTransform(src, dst);
+    cv.warpPerspective(cardImg, m, (cw, ch), dst: canvas, borderMode: cv.BORDER_TRANSPARENT);
+    src.dispose();
+    dst.dispose();
+    m.dispose();
+    return canvas;
+  }
+
+  // The recognizer hashes both upright orientations a detected card could be in,
+  // so matchHashMulti recovers the card no matter how it was rotated in frame.
+  int bestDist(cv.Mat canvas, String upright) {
+    final orientations = rectifyCardOrientations(canvas);
+    expect(orientations, isNotEmpty, reason: 'card quad should be detected');
+    final hashes = [for (final r in orientations) phashFromRgb(r)];
+    return matchHashMulti(hashes, {'card': upright}).top1!.distance;
+  }
+
+  test('recognizes a card held upside-down (180°)', () {
+    final card = _syntheticCard();
+    final upright = phashFromRgb(_matToRgb(card));
+    final flipped = cv.rotate(card, cv.ROTATE_180);
+
+    const cw = 820, ch = 1080;
+    // Upright-ish quad in the frame, but the card content is upside-down.
+    final canvas = renderOnCanvas(flipped, [
+      cv.Point(150, 130),
+      cv.Point(670, 150),
+      cv.Point(700, 930),
+      cv.Point(120, 900),
+    ], cw, ch);
+
+    final dist = bestDist(canvas, upright);
+    expect(dist, lessThan(30), reason: 'upside-down card should match upright (got $dist)');
+
+    card.dispose();
+    flipped.dispose();
+    canvas.dispose();
+  }, skip: !_opencvAvailable() ? 'dartcv native lib not available (set DARTCV_LIB_PATH)' : null);
+
+  test('recognizes a card rotated 90° in the frame', () {
+    final card = _syntheticCard();
+    final upright = phashFromRgb(_matToRgb(card));
+    final sideways = cv.rotate(card, cv.ROTATE_90_CLOCKWISE); // now landscape
+
+    const cw = 1100, ch = 820;
+    // Landscape quad: card lies on its side in the frame.
+    final canvas = renderOnCanvas(sideways, [
+      cv.Point(130, 140),
+      cv.Point(950, 120),
+      cv.Point(980, 690),
+      cv.Point(110, 710),
+    ], cw, ch);
+
+    final dist = bestDist(canvas, upright);
+    expect(dist, lessThan(30), reason: 'sideways card should normalize to portrait (got $dist)');
+
+    card.dispose();
+    sideways.dispose();
+    canvas.dispose();
   }, skip: !_opencvAvailable() ? 'dartcv native lib not available (set DARTCV_LIB_PATH)' : null);
 }

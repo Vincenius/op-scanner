@@ -29,13 +29,29 @@ MatchResult matchHash(
   String queryHash,
   Map<String, String> db, {
   Iterable<String>? restrictTo,
+}) =>
+    matchHashMulti([queryHash], db, restrictTo: restrictTo);
+
+/// Like [matchHash] but scores several candidate hashes for the SAME card —
+/// e.g. the two upright orientations produced by [rectifyCardOrientations] — and
+/// keeps, per variant, the closest match across them. This is what lets a card
+/// be recognized when it is held upside-down or rotated in the frame.
+MatchResult matchHashMulti(
+  List<String> queryHashes,
+  Map<String, String> db, {
+  Iterable<String>? restrictTo,
 }) {
   final ids = restrictTo ?? db.keys;
   final ranked = <MatchCandidate>[];
   for (final id in ids) {
     final h = db[id];
     if (h == null || h.length != 48) continue;
-    ranked.add(MatchCandidate(id, hammingHex(queryHash, h)));
+    var best = 192;
+    for (final q in queryHashes) {
+      final d = hammingHex(q, h);
+      if (d < best) best = d;
+    }
+    ranked.add(MatchCandidate(id, best));
   }
   ranked.sort((a, b) => a.distance.compareTo(b.distance));
 
