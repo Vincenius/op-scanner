@@ -9,6 +9,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import '../data/catalog_repository.dart';
 import '../data/collection_controller.dart';
 import '../data/local/database.dart';
+import '../data/sync_service.dart';
 import '../providers.dart';
 import '../util/format.dart';
 import '../features/catalog/widgets/card_thumb.dart';
@@ -88,14 +89,37 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
   }
 
   Future<void> _start() async {
+    // Re-read the match DB from SQLite each time the screen opens. The provider
+    // is cached for the app's lifetime, so without invalidating it a catalog
+    // sync done since launch (the one that downloads recognition hashes) would
+    // not be reflected and the screen would stay stuck on "no recognition data".
+    ref.invalidate(scanDbProvider);
     _db = await ref.read(scanDbProvider.future);
-    await _initCamera();
+    if (_camera == null) await _initCamera();
     if (_camera != null && _db.isNotEmpty) {
-      _scanning = true;
-      _loop();
+      if (mounted) setState(() => _error = null);
+      if (!_scanning) {
+        _scanning = true;
+        _loop();
+      }
     } else if (_db.isEmpty) {
-      setState(() => _error = 'No recognition data yet — sync the catalog first.');
+      if (mounted) {
+        setState(() => _error = 'No recognition data yet — sync the catalog first.');
+      }
     }
+  }
+
+  /// Run a catalog sync (which downloads recognition hashes), then re-check the
+  /// match DB. Invoked from the empty-state button so the user can recover
+  /// without leaving the scan screen.
+  Future<void> _syncAndRetry() async {
+    try {
+      await ref.read(syncControllerProvider.notifier).sync();
+    } catch (_) {
+      // Sync errors surface via syncControllerProvider; _start re-checks the
+      // local DB regardless and re-shows the prompt if still empty.
+    }
+    await _start();
   }
 
   Future<void> _initCamera() async {
@@ -293,6 +317,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
 
   Widget _bottomPanel() {
     final outcome = _outcome;
+    final noData = _db.isEmpty;
+    final sync = ref.watch(syncControllerProvider);
     return Container(
       color: Colors.black,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -301,7 +327,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with WidgetsBindingObse
         children: [
           if (_error != null && _camera != null)
             Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_error!, style: const TextStyle(color: Colors.orangeAccent))),
-          if (outcome != null && outcome.topVariant != null)
+          if (noData)
+            _SyncPrompt(running: sync.running, progress: sync.progress, onSync: _syncAndRetry)
+          else if (outcome != null && outcome.topVariant != null)
             _ResultCard(outcome: outcome, onAdd: _add)
           else
             const SizedBox(
@@ -384,6 +412,45 @@ class _ResultCard extends StatelessWidget {
               FilledButton(onPressed: () => onAdd(v.variantId, name), child: const Text('Add')),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Empty-state recovery shown when no recognition hashes are present locally.
+/// Lets the user sync (which downloads the hashes) without leaving the screen.
+class _SyncPrompt extends StatelessWidget {
+  const _SyncPrompt({required this.running, required this.progress, required this.onSync});
+  final bool running;
+  final SyncProgress? progress;
+  final VoidCallback onSync;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!running) {
+      return FilledButton.icon(
+        onPressed: onSync,
+        icon: const Icon(Icons.sync),
+        label: const Text('Sync catalog now'),
+      );
+    }
+    String label;
+    switch (progress?.phase) {
+      case 'images':
+        label = 'Downloading images…';
+      case 'complete':
+        label = 'Finishing…';
+      default:
+        label = 'Syncing catalog…';
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: [
+          LinearProgressIndicator(value: progress?.fraction),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(color: Colors.white70)),
+        ],
       ),
     );
   }
